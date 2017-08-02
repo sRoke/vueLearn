@@ -1,0 +1,7 @@
+<template>
+  <div class="home">
+    <h1>{{ msg }}</h1>
+    <h2>home</h2>
+  </div>
+</template>
+import './home.js'
