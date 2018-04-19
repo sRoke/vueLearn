@@ -1,0 +1,34 @@
+const actions = {
+  showLeftMenu ({ commit }, status) {
+    commit('showLeftMenu', status)
+  },
+  setMenus({ commit }, menus) {
+    commit('setMenus', menus)
+  },
+  setRules({ commit }, rules) {
+    commit('setRules', rules)
+  },
+  setUsers({ commit }, users) {
+    commit('setUsers', users)
+  },
+  setUserGroups({ commit }, userGroups) {
+    commit('setUserGroups', userGroups)
+  },
+  setOrganizes({ commit }, organizes) {
+    commit('setOrganizes', organizes)
+  },
+  setSelectTagOfLclass({ commit }, selectTagOfLclass) {
+    commit('setSelectTagOfLclass', selectTagOfLclass)
+  },
+  setOrderNum({ commit }, status) {
+    commit('setOrderNum', status)
+  },
+  setDemandNum({ commit }, status) {
+    commit('setDemandNum', status)
+  },
+  setServiceNotice({ commit }, status) {
+    commit('setServiceNotice', status)
+  }
+}
+
+export default actions

@@ -1,0 +1,382 @@
+<template>
+  <div v-loading="loading">
+    <div class="m-b-20 ovf-hd">
+      <el-row :gutter="20" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+           <el-col :span="2">
+        <router-link  class="btn-link-large add-btn" to="add">
+          <i class="el-icon-plus"></i>&nbsp;&nbsp;添加
+        </router-link>
+           </el-col>
+           <el-col :span="3" :offset="14">
+            <el-select v-model="status"  @change="select()">
+             <el-option
+              v-for="item in options"
+              :label="item.label"
+              :value="item.status">
+             </el-option>
+            </el-select>
+           </el-col>
+           <el-col :span="5" >
+        <el-input placeholder="请输入作品名称和所属公司查询" v-model="keyword">
+          <el-button slot="append" icon="search" @click="select()"></el-button>
+        </el-input>
+           </el-col>
+      </el-row>
+      <worksWatch ref="worksWatch" :info="form"></worksWatch>
+    </div>
+    <el-table
+      ref="t1"
+      :data="tableData"
+      style="width: 100%" @sort-change="sorts" @row-key= "bob"
+      @selection-change="handleSelectionChange">
+      <el-table-column
+        type="selection"
+        v-if='isMDel'
+        :reserve-selection=true
+        :selectable='isSelect'
+        width="55">
+      </el-table-column>
+      <el-table-column
+          label="编号"
+          >
+          <template scope="scope">
+            <span>{{ scope.row.num }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="图片"
+          >
+          <template scope="scope">
+            <img :src='scope.row.img_url'/>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="作品名称"
+          >
+          <template scope="scope">
+            <span @click="watch(scope.row.id)" class="now">{{ scope.row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="所属公司"
+          min-width="100"
+          show-overflow-tooltip>
+          <template scope="scope">
+            <span>{{ scope.row.company }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="所在地"
+          >
+          <template scope="scope">
+            <span>{{ scope.row.place }}</span>
+          </template>
+        </el-table-column>
+       <el-table-column
+        label="状态"
+        >
+        <template scope="scope">
+          <span >{{ scope.row.status }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="创建时间"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span>{{ scope.row.create_time }}</span>
+        </template>
+      </el-table-column>
+        <el-table-column
+          label="点击量"
+          >
+          <template scope="scope">
+            <span>{{ scope.row.click_num }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序"  sortable="false" prop="sort">
+          <template scope="scope">
+            <span>{{ scope.row.sort }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" >
+          <template scope="scope">
+            <el-button
+              size="small"
+              type="success"
+              v-show='scope.row.passbtnStatus'
+              @click="passed(scope.$index, scope.row)">通过
+            </el-button>
+            <el-button
+              size="small"
+              type="warning"
+              v-show='scope.row.unpassbtnStatus'
+              @click="unpassed(scope.$index, scope.row)">不通过
+            </el-button>
+            <router-link 
+              :to="{ name: 'infoEdit', params: { id: scope.row.id }}" 
+              class="btn-link edit-btn"
+              v-show='scope.row.editbtnStatus||scope.row.passbtnStatus'>
+              编辑
+            </router-link>
+            <el-button
+              size="small"
+              type="danger"
+              v-show='scope.row.delbtnStatus'
+              @click="handleDelete(scope.row)">删除
+            </el-button>
+          </template>
+        </el-table-column>
+    </el-table>
+    <div class="pos-rel p-t-20" v-show="isPage">
+      <div class="block pages m-b-10">
+        <el-pagination
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        layout="total, sizes, prev, pager, next, jumper"
+        :page-sizes="[15, 30, 50, 100]"
+        :page-size="pageSize"
+        :current-page="currentPage"
+        :total="dataCount">
+        </el-pagination>
+      </div>
+    </div>
+    <div class="fl">
+      <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+    </div>
+  </div>
+</template>
+<style>
+  .el-table .cell img{
+    width: 50px;
+    height: 50px;
+  }
+  .el-button + .el-button{
+    margin-left: 0px;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import sortData from '../../../assets/js/data'
+  import Vue from 'vue'
+  import worksWatch from './works_watch.vue'
+  export default {
+    watch: {
+      '$route'(to, from) {
+        var self = this
+        self.init()
+      }
+    },
+    methods: {
+      select() {
+        var self = this
+        router.push({ path: '/data/info/work', query: { page: self.currentPage, pagesize: self.pageSize, keyword: self.keyword, status: self.status, sort: self.sort }})
+      },
+      init() {
+        this.fullscreenLoading = true
+        var self = this
+        if (self.$route.fullPath == '/data/info/work') {
+          self.currentPage = 1
+          self.pageSize = 15
+          self.keyword = ''
+          self.status = ''
+          self.sort = ''
+        } else {
+          self.currentPage = self.$route.query.page * 1
+          self.pageSize = self.$route.query.pagesize * 1
+          self.keyword = self.$route.query.keyword
+          self.status = self.$route.query.status
+          self.sort = self.$route.query.sort
+        }
+        self.getData()
+      },
+      getData() {
+        this.apiGet('projects?page=' + this.currentPage + '&pagesize=' + this.pageSize + '&keyword=' + encodeURI(this.keyword) + '&type=' + this.status + '&sort=' + this.sort).then((res) => {
+          this.fullscreenLoading = false
+          if (res.code == 200) {
+            if (res.data.list.length > 0) {
+              this.isPage = true
+            }
+            let data = {}
+            this.tableData = _(res.data.list).forEach((val, key) => {
+              let img = {}
+              if (val.img_url) {
+                val.img_url = window.imgUrl + val.img_url + '_285x220_.jpg'
+              }
+              val = sortData.sortStatus(val)
+            })
+            this.dataCount = res.data.total_count
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      watch(id) {
+        this.$refs.worksWatch.open(id)
+      },
+      passed(index, item) {
+        // 通过
+        this.apiPut('projects/' + item.id + '/pass', '').then((res) => {
+          if (res.code == 200) {
+            let newItem = sortData.passStauts(res.data, item)
+            Vue.set(this.tableData, index, newItem)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      sorts() {
+        if (this.x % 2 == 0) {
+          this.sort = 2
+          this.select()
+          this.x ++
+        } else {
+          this.sort = 1
+          this.select()
+          this.x ++
+        }
+      },
+      unpassed(index, item) {
+        // 不通过
+        this.apiPut('projects/' + item.id + '/failed', '').then((res) => {
+          if (res.code == 200) {
+            let newItem = sortData.unpassStauts(res.data, item)
+            Vue.set(this.tableData, index, newItem)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      handleEdit(index, row) {
+        // console.log(index, row)
+      },
+      handleDelete(item) {
+        this.$confirm('确认删除?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('projects/', item.id).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              // _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          })
+        })
+      },
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.select()
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        this.currentPage = 1
+        this.select()
+        // console.log(`每页 ${val} 条`)
+      },
+      isSelect(row, index) {
+        // console.log(row.delbtnStatus)
+        if (row.delbtnStatus == true) {
+          return true
+        } else {
+          return false
+        }
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      sureDel() {
+        // console.log(JSON.stringify(this.delList))
+        let asd = {
+          delList: this.delList
+          // delList: this.delList
+        }
+        // asd.push(asd)
+        console.log(asd)
+        if (this.delList.length == 0) {
+          _g.toastMsg(this, 'warning', '请选择删除项')
+        } else {
+          // console.log(asd)
+          this.apiPost('projects/destroy', asd).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+          this.isMDel = false
+        }
+        // console.log((this.delList))
+      },
+      cancelDel() {
+        this.$refs.t1.clearSelection(this.tableData)
+        this.isMDel = false
+      },
+      handleSelectionChange(val) {
+        this.delList = []
+        _(val).forEach((res, key) => {
+          this.delList.push(res.id)
+        })
+      },
+      bob() {
+        console.log('111')
+      }
+    },
+    data() {
+      return {
+        fullscreenLoading: false,
+        isMDel: false,
+        delList: [],
+        pageSize: 15,
+        sort: null,
+        x: 1,
+        currentPage: 1,
+        dataCount: null,
+        keyword: '',
+        isPage: false,
+        loading: true,
+        tableData: [],
+        options: [{
+          status: '',
+          label: '全部状态'
+        }, {
+          status: '1',
+          label: '待审核'
+        }, {
+          status: '2',
+          label: '已上架'
+        }, {
+          status: '3',
+          label: '已下架'
+        }, {
+          status: '4',
+          label: '已上架(同意)'
+        }, {
+          status: '5',
+          label: '已下架(同意)'
+        }, {
+          status: '6',
+          label: '不通过'
+        }],
+        status: ''
+      }
+    },
+    created() {
+      this.loading = false
+      this.init()
+    },
+    components: {
+      worksWatch
+    },
+    mixins: [http]
+  }
+</script>

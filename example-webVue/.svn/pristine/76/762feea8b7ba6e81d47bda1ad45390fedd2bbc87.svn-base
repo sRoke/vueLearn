@@ -1,0 +1,539 @@
+<template>
+  <div class="gray-14 fz-14">
+    <el-row :gutter="20">
+      <el-col :span="10" :offset="1">
+        <div><span class="labelTitle">需求方：</span>{{detail.demander}}</div>
+      </el-col>
+      <el-col :span="10" :offset="2">
+        <div><span class="labelTitle">需求编号：</span>{{detail.number}}</div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="10" :offset="1">
+        <div><span class="labelTitle">联系人：</span>{{detail.user_name}}</div>
+      </el-col>
+      <el-col :span="10" :offset="2">
+        <div><span class="labelTitle">生成时间：</span>{{detail.create_time}}</div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="10" :offset="1">
+        <div><span class="labelTitle">网站账号：</span>{{detail.user_phone}}</div>
+      </el-col>
+      <el-col :span="10" :offset="2">
+        <div><span class="labelTitle">公司地址：</span>{{detail.province}}{{detail.city}}{{detail.zone}}{{detail.address}}</div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+        <el-col :span="10" :offset="1">
+          <div><span class="labelTitle">目标费用：</span>{{detail.budget_min}} - {{detail.budget_max}} 元</div>
+        </el-col>
+        <el-col :span="10" :offset="2">
+          <div><span class="labelTitle">产品类别：</span>{{detail.area}}</div>
+        </el-col>
+      </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div><span class="labelTitle">需求标题：</span>{{detail.title}}</div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div>
+          <span class="labelTitle fl">需求标签：</span>
+          <div class="fl">
+            <span class="detail-label bor-ra-5" v-for="la in detail.label">{{la.label_name}}</span>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div><span class="labelTitle">需求备注：</span>{{detail.remark}}</div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div>
+          <span class="labelTitle">合作模式：</span>
+          <el-radio disabled class="radio" v-model="detail.coo_model" label="1">项目制</el-radio>
+          <el-radio disabled class="radio" v-model="detail.coo_model" label="2">销量提成</el-radio>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div>
+          <span class="labelTitle fl">设计方案：</span>
+          <div class="w-300 fl m-l-5">
+            <el-checkbox v-model="checked1" disabled class="w-120">外观设计及数据</el-checkbox>
+            <el-checkbox v-model="checked2" disabled class="w-120">外观手板</el-checkbox>
+            <el-checkbox v-model="checked3" disabled class="w-120 m-l-0  m-t-10">内部结构设计</el-checkbox>
+            <el-checkbox v-model="checked4" disabled class="w-120 m-t-10">功能手板</el-checkbox>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1" class="p-b-20 line-b">
+        <div>
+          <span class="labelTitle fl">需求金额：</span>
+          <div class="fl w-80P">
+            <div class="fl w-80P">
+                <div class="fl c-blue">外部设计</div>
+                <div class="fl m-l-10">预付款 <span class="money-red">￥{{detail.outward_pre_pay}}</span></div>
+                <div class="fl m-l-20" v-if="!showBonus">尾款 <span class="money-red">￥{{detail.outward_balance_amount}}</span></div>
+                <div class="fl m-l-20" v-if="showBonus">提成周期 <span class="money-red">3个月<span class="fz-12">(按季度计算)</span></span></div>
+                <div class="fl m-l-20" v-if="showBonus">提成时长 <span class="money-red">{{detail.bonus_duration}}个月</span></div>
+              </div>
+            <div class="fl" v-if="showBonus">
+              <div class="fl m-t-20">提成方案</div>
+              <div class="fl m-l-20 m-t-20">
+                <div class="p-b-10">
+                  <span class="money-red">{{bonus1.start_count}}</span> 至 <span class="money-red">{{bonus1.end_count}}</span> 台(单位)，提成费为<span class="money-red">￥{{bonus1.amount}}</span>元/台(单位)
+                </div>
+                <div class="line-t p-b-10 p-t-10" v-if="bonus2.show">
+                  <span class="money-red">{{bonus2.start_count}}</span> 至 <span class="money-red">{{bonus2.end_count}}</span> 台(单位)，提成费为<span class="money-red">￥{{bonus2.amount}}</span>元/台(单位)
+                </div>
+                <div class="line-t p-t-10" v-if="bonus3.show">
+                  <span class="money-red">{{bonus3.start_count}}</span> 台(单位)以上，提成费为<span class="money-red">￥{{bonus3.amount}}</span>元/台(单位)
+                </div>
+              </div>
+            </div>
+            <div class="fl w-80P m-t-10">
+                <span class="c-blue">内部结构</span>
+                <span class="m-l-10">预付款：</span>
+                <span class="money-red">￥{{ detail.internal_pre_pay }}</span>
+                <span class="m-l-10">尾款：</span>
+                <span class="money-red">￥{{ detail.internal_balance_amount }}</span>
+              </div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20" >
+      <el-col :span="10" :offset="1">
+        <div><span class="labelTitle">设计方：</span>{{baseData.company_name}}</div>
+      </el-col>
+      <el-col :span="10" :offset="2">
+        <div class="fl pos-rel">
+          <span class="labelTitle">订单编号：</span>
+          <span>{{baseData.order_number}}</span>
+          <div class="order-tips"><span class="triangle"></span>{{cooModel}}</div>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1">
+        <div>
+          <span class="labelTitle fl">订单金额：</span>
+          <div class="fl">
+            <div>
+              <div class="fl">预付款 <span class="money-red">￥{{(baseData.pre_pay + 0).toFixed(2)}}</span></div>
+              <div class="fl m-l-20" v-show="(isCom == 2) || (detail.coo_model == 1)">尾款 <span class="money-red">￥{{(baseData.balance_amount + 0).toFixed(2)}}</span></div>
+              <div class="fl m-l-20" v-show="(isCom == 1) && (detail.coo_model == 2)">提成周期 <span class="money-red">3个月<span class="fz-12">(按季度计算)</span></span></div>
+              <div class="fl m-l-20" v-show="(isCom == 1) && (detail.coo_model == 2)">提成时长 <span class="money-red">{{baseData.bonus_duration}}个月</span></div>
+            </div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="22" :offset="1" class="bg-gray bor-ra-5 p-all-15">
+        <div>
+          <div class="fl m-l-30 status-sel m-tb-8 fz-20 w-250">
+             {{baseData.order_status_name}}
+          </div>
+          <div class="fl m-l-30 m-t-20" v-show="allEdit">
+            <router-link :to="{ name: 'demandDetail', params: { id: baseData.demand_id }}" class="btn-link-large edit-btn" v-show="demandStatus.status == 101">
+              重新选择服务方
+            </router-link>
+            <el-button type="primary" @click="upStatus(demandStatus.status)" size="large" :loading="flagTrans(demandStatus.status)" v-if="demandStatus.btnShow">{{demandStatus.btnName}}</el-button>
+          </div>
+          <div class="fr m-r-30 m-tb-8 status-sel fz-20" v-show="(showDeadline) && (deadline > 0)">倒计时：<span>{{timeCalc}}</span></div>
+        </div>
+      </el-col>
+    </el-row>
+    <tabInfo :isOne='isOne' :reId="reId" :conId="baseData.contract_id" :isCom="isCom" :model="baseData.coo_model"></tabInfo>
+    <upImg ref="upImg" :status="upImgStatus" :urlId="null"></upImg>
+  </div>
+</template>
+<style type="text/css">
+  .labelTitle {
+    display: inline-block;
+    width: 100px;
+    text-align: right;
+    font-weight: bold;
+  }
+  .m-l-0 {
+    margin-left: 0 !important;
+  }
+  .line-t {
+    border-top: 1px solid #999999;
+  }
+  .line-b {
+    border-bottom: 1px solid #999999;
+  }
+  .money-red {
+    color: #e23c12;
+    font-weight: bold;
+  }
+  .bg-gray {
+    background: #99a9bf;
+  }
+  .p-all-15 {
+    padding: 15px;
+  }
+  .m-t-41 {
+    margin-top: 41px;
+  }
+  .m-t-55 {
+    margin-top: 55px;
+  }
+  .m-t-60 {
+    margin-top: 60px;
+  }
+  .m-t-65 {
+    margin-top: 65px;
+  }
+  .status-sel{
+    color: #c23e34;
+    font-size: 18px;
+  }
+  .detail-label {
+    height: 16px;
+    line-height: 16px;
+    padding: 5px 8px;
+    background: #cccccc;
+    margin-left: 5px;
+    font-size: 14px;
+  }
+  .order-tips{
+    position: absolute;
+    top: -1px;
+    right: -82px;
+    width: 72px;
+    height: 24px;
+    line-height: 24px;
+    background: #1f2d3d;
+    color: #ffffff;
+    font-size: 14px;
+    text-align: center;
+    border-radius: 4px;
+  }
+  .order-tips .triangle{
+    position: absolute;
+    left: -9px;
+    top: 3px;
+    width: 0;
+    height: 0;
+    border-top: 9px solid transparent;
+    border-right: 10px solid #1f2d3d;
+    border-bottom: 9px solid transparent;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import tabInfo from './tab.vue'
+  import upImg from './upImg.vue'
+
+  export default {
+    data() {
+      return {
+        postArr: [],  //  按钮限制的数组
+        loadingItem: '',
+        showBonus: false,
+        detail: {
+          outward_pre_pay: 0,
+          internal_pre_pay: 0,
+          outward_balance_amount: 0,
+          internal_balance_amount: 0
+        },
+        id: null,
+        bonus1: {},
+        bonus2: {},
+        bonus3: {},
+        checked1: false,
+        checked2: false,
+        checked3: false,
+        checked4: false,
+        reId: null,
+        isCom: 1,
+        isOne: true,
+        baseData: {
+          pre_pay: 0,
+          balance_amount: 0,
+          bonus_duration: 0
+        },
+        cooModel: '外观设计',
+        demandStatus: {
+          btnName: '',
+          btnShow: false,
+          status: null
+        },
+        upImgStatus: null,
+        allEdit: false,
+        timeCalc: '',
+        deadline: null,
+        showDeadline: false
+      }
+    },
+    methods: {
+      getData() {
+        this.apiGet('orders/' + this.id).then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.baseData = res.data
+            if (res.data.order_type == 2) {
+              this.cooModel = '内部结构'
+            } else {
+              this.cooModel = '外观设计'
+            }
+            // 转换合作模式为字符串
+            if (res.data.require_info.coo_model != null) {
+              res.data.require_info.coo_model = res.data.require_info.coo_model.toString()
+            }
+            this.detail = res.data.require_info
+            this.reId = res.data.demand_id
+            this.isCom = res.data.order_type
+            // 提成方案
+            let program = res.data.require_info.bonus_program
+            if (program.length > 0) {
+              this.bonus1 = program[0]
+              if ((program.length == 3) && (program[2].start_count != null)) {
+                this.bonus2 = program[1]
+                this.bonus3 = program[2]
+                this.bonus3.show = true
+                this.bonus2.show = true
+              } else if ((program.length == 3) && (program[1].start_count != null)) {
+                this.bonus2 = program[1]
+                this.bonus2.show = true
+                this.bonus3.show = false
+              } else {
+                this.bonus2.show = false
+                this.bonus3.show = false
+              }
+            }
+            // 判断合作模式
+            if (res.data.require_info.coo_model == 1) {
+              this.showBonus = false
+            } else {
+              this.showBonus = true
+            }
+            // 判断设计方案的选定
+            _(res.data.require_info.design_way).forEach((val, key) => {
+              switch (val) {
+                case '10':
+                  this.checked1 = true
+                  break
+                case '20':
+                  this.checked2 = true
+                  break
+                case '30':
+                  this.checked3 = true
+                  break
+                case '40':
+                  this.checked4 = true
+                  break
+              }
+            })
+            // 设置订单状态
+            this.setStatus(res.data.order_status)
+            this.labelList = res.data.require_info.label
+            this.loadingItem.close()
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 设置订单状态
+      setStatus(status) {
+        switch (status) {
+          case 101:
+            this.demandStatus = {
+              btnName: '重新发起合同',
+              btnShow: true,
+              status: 100
+            }
+            break
+          case 110:
+            if (this.isCom == 1) {
+              this.demandStatus = {
+                btnName: '上传市场调研',
+                btnShow: true,
+                status: 120
+              }
+            }
+            break
+          case 120:
+            this.demandStatus = {
+              btnName: '上传结构分析',
+              btnShow: true,
+              status: 130
+            }
+            break
+          case 130:
+            this.demandStatus = {
+              btnName: '上传概念草图',
+              btnShow: true,
+              status: 140
+            }
+            break
+          case 140:
+            this.demandStatus = {
+              btnName: '上传效果设计',
+              btnShow: true,
+              status: 150
+            }
+            break
+          case 150:
+            this.showDeadline = true
+            this.deadline = this.detail.effect_time
+            break
+          case 160:
+            this.demandStatus = {
+              btnName: '上传效果设计',
+              btnShow: true,
+              status: 150
+            }
+            break
+          case 180:
+            this.demandStatus = {
+              btnName: '上传三维数据',
+              btnShow: true,
+              status: 190
+            }
+            break
+          case 190:
+            this.showDeadline = true
+            this.deadline = this.detail.three_dimensional_time
+            break
+          case 200:
+            this.demandStatus = {
+              btnName: '上传三维数据',
+              btnShow: true,
+              status: 190
+            }
+            break
+          case 220:
+            this.demandStatus = {
+              btnName: '上传结构设计',
+              btnShow: true,
+              status: 230
+            }
+            break
+          case 230:
+            this.showDeadline = true
+            this.deadline = this.detail.structure_time
+            break
+          case 240:
+            this.demandStatus = {
+              btnName: '上传结构设计',
+              btnShow: true,
+              status: 230
+            }
+            break
+          case 260:
+            this.isOne = false
+            break
+        }
+        if (this.showDeadline) {
+          this.calcTime()
+        }
+      },
+      // 订单状态操作
+      upStatus(status) {
+        if (status == 100) {
+          this.postArr.push(status)
+          this.apiPut('orders/' + this.id + '/contracts/' + this.baseData.contract_id, '', { action_type: 'reInitiate' }).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '操作成功')
+              setTimeout(() => {
+                _g.reloadPage(this)
+              }, 1000)
+            } else {
+              this.postArr.splice(_.indexOf(this.postArr, status), 1)
+              _g.dealError(this, res)
+            }
+          }, (res) => {
+            this.postArr.splice(_.indexOf(this.postArr, status), 1)
+          })
+        } else {
+          this.upImgStatus = status
+          this.$refs.upImg.open()
+        }
+      },
+      // 匹配倒计时
+      calcTime() {
+        if (this.deadline == 0) {
+          _g.reloadPage(this)
+          return
+        }
+        let _this = this
+        let deadlineDay = parseInt(((this.deadline) / 3600) / 24)
+        let deadlineHour = parseInt(((this.deadline) / 3600) % 24)
+        let deadlineMin = parseInt(((this.deadline) % 3600) / 60)
+        let deadlineSec = parseInt(((this.deadline) % 3600) % 60)
+        if (deadlineHour < 10) {
+          deadlineHour = '0' + deadlineHour
+        }
+        if (deadlineMin < 10) {
+          deadlineMin = '0' + deadlineMin
+        }
+        if (deadlineSec < 10) {
+          deadlineSec = '0' + deadlineSec
+        }
+        this.timeCalc = deadlineDay + '天' + deadlineHour + '时' + deadlineMin + '分' + deadlineSec + '秒'
+        setTimeout(() => {
+          _this.deadline = _this.deadline - 1
+          _this.calcTime()
+        }, 1000)
+      },
+      flagTrans(val) {
+        return _.includes(this.postArr, val)
+      }
+    },
+    created() {
+      let options = {
+        text: '正在加载中',
+        fullscreen: false,
+        lock: true,
+        customClass: 'loading-modal'
+      }
+      this.loadingItem = this.$loading(options)
+      // 获取权限列表
+      let auth = Lockr.get('authList')
+      // 获取当前页面地址名
+      let name = this.$route.name
+      if (auth) {
+        // 订单管理的订单详情
+        if ((name == 'orderDetail') || (name == 'overDetail')) {
+          if (typeof (auth.order_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+        // 服务商列表的订单详情
+        if (name == 'serviceOrderDetail') {
+          if (typeof (auth.service_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+      } else {
+        this.allEdit = true
+      }
+      this.id = this.$route.params.id
+      this.getData()
+    },
+    computed: {
+      address() {
+        let addr = this.detail.province + this.detail.city + this.detail.zone + this.detail.address
+        return addr
+      }
+    },
+    components: {
+      tabInfo,
+      upImg
+    },
+    mixins: [http]
+  }
+</script>

@@ -1,0 +1,338 @@
+<template>
+  <el-dialog ref="dialog" title="选择跟进人员" v-model="dialogVisible" class="staff-dialog">
+    <div class="fr w-300 dialog-search m-b-20">
+      <el-input placeholder="请输入员工姓名" v-model="keywords">
+        <el-button slot="append" icon="search" @click.prevent="searchStaff()"></el-button>
+      </el-input>
+    </div>
+    
+    <el-row class="tabs">
+      <el-col :span="4"><div class="staff" :class="{'staffActive': saleActive}" @click="clickSelect('salesman')">销售人员</div></el-col>
+      <el-col :span="4"><div class="staff" :class="{'staffActive': serviceActive}" @click="clickSelect('serviceman')">客服</div></el-col>
+      <el-col :span="4"><div class="staff" :class="{'staffActive': pushActive}" @click="clickSelect('pushman')">地推</div></el-col>
+    </el-row>
+    
+    <div class="container">
+      <div v-show="saleActive" v-for="item in staffList">
+        <el-row class="staff-container">
+          <el-col :span="4">
+            <el-button type="text" class="tx-c cur-pointer w-80" @click.prevent="selectStaff(item,'销售人员')">{{ item.name }}</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <div v-show="serviceActive" v-for="item in staffList">
+        <el-row class="staff-container">
+          <el-col :span="4">
+            <el-button type="text" class="tx-c cur-pointer w-80" @click.prevent="selectStaff(item,'客服')">{{ item.name }}</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <div v-show="pushActive" v-for="item in staffList">
+        <el-row class="staff-container">
+          <el-col :span="4">
+            <el-button type="text" class="tx-c cur-pointer w-80" @click.prevent="selectStaff(item,'地推')">{{ item.name }}</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <div class="block fr pag">
+        <el-pagination layout="prev, pager, next"
+          @current-change="handleCurrentChange"
+          :current-page="currentPage"
+          :total="dataCount">
+        </el-pagination>
+      </div>
+    </div>
+    <el-row class="selected-row">
+      <el-col :span="2"><div class="tx-c">已选人员</div></el-col>
+      <el-col :span="6">
+        <div class="tx-c">销售人员：
+          <el-tag type="gray" v-show="saleStaff.length > 0" v-for="saler in saleStaff">{{ saler.name }}</el-tag>
+        </div>
+      </el-col>
+      <el-col :span="6">
+        <div class="tx-c">客服：
+          <el-tag type="gray" v-show="serviceStaff.length > 0" v-for="servicer in serviceStaff">{{ servicer.name }}</el-tag>
+        </div>
+      </el-col>
+      <el-col :span="6">
+        <div class="tx-c">地推：
+          <el-tag type="gray" v-show="pushStaff.length > 0" v-for="pusher in pushStaff">{{ pusher.name }}</el-tag>
+        </div>
+      </el-col>
+    </el-row>
+
+    <span slot="footer" class="dialog-footer selected-row">
+      <el-button @click="cancel()">取 消</el-button>
+      <el-button type="primary" @click="submit()">确 定</el-button>
+    </span>
+  </el-dialog>
+</template>
+
+<style scoped>
+  .tabs{
+    margin-top: 35px;
+    margin-left: 40px;
+  }
+  .staff{
+    text-align: center;
+    cursor: pointer;
+    line-height: 36px;
+  }
+  .pag{
+    margin-right: 20px; 
+    clear: both; 
+    position: absolute; 
+    right: 2em; 
+    bottom: 10%;
+  }
+  .staffActive{
+    border: 1px solid #ccc;
+    border-bottom: 2px solid #fff;
+    margin-bottom: -2px;
+    color: #3399FF;
+  }
+  .staff-dialog .el-dialog {
+    min-width: 960px;
+  }
+  .staff-dialog .el-dialog__body{
+    padding-bottom: 0;
+  }
+  .dialog-search{
+    margin-right: 40px;
+  }
+  .dialog-search > input {
+    display: inline-table;
+  }
+  .dialog-footer{
+    padding-top: 0;
+  }
+  .cur-pointer{
+    cursor: pointer;
+  }
+  .container{
+    height: 300px;
+    margin: 0 40px;
+    color: #169BD9;
+    position: relative;
+    border: 1px solid #ccc;
+  }
+  .staff-container{
+    float: left;
+    margin: 20px 0 0 50px;
+  }
+  .selected-row{
+    margin: 10px 40px 0 40px
+  }
+  .tx-c > .el-tag--gray{
+    margin: 0 5px 5px 5px
+  }
+  .customerData .el-input{
+    display: inline-table;
+  }
+</style>
+
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['followPeople', 'clients', 'callback'],
+    data() {
+      return {
+        dialogVisible: false,
+        saleActive: true,
+        serviceActive: false,
+        pushActive: false,
+        staffList: [],
+        currentPage: 1,
+        dataCount: 10,
+        keywords: '',
+        saleStaff: [],
+        serviceStaff: [],
+        pushStaff: [],
+        selectedStaff: [],
+        staffName: '',
+        pageType: 'salesman'
+      }
+    },
+    methods: {
+      handleCurrentChange(val) { // 分页的选择
+        var self = this
+        self.currentPage = val
+        self.clickSelect(self.pageType)
+      },
+      open() { // 打开模态框
+        var self = this
+        self.$refs.dialog.open()
+      },
+      close() { // 关闭模态框
+        var self = this
+        self.$refs.dialog.close()
+      },
+      cancel() { // 关闭模态框
+        this.dialogVisible = false
+        this.saleStaff = []
+        this.serviceStaff = []
+        this.pushStaff = []
+        this.filterStaff()
+      },
+      submit() { // 确定选择的跟进人员
+        var self = this
+        var saleStaffs = null
+        var serviceStaffs = null
+        var pushStaffs = null
+        self.dialogVisible = false
+        if (self.saleStaff.length > 0) {
+          saleStaffs = {
+            'name': self.saleStaff[0].name,
+            'id': self.saleStaff[0].id,
+            'label': '销售人员'
+          }
+        }
+        if (self.serviceStaff.length > 0) {
+          serviceStaffs = {
+            'name': self.serviceStaff[0].name,
+            'id': self.serviceStaff[0].id,
+            'label': '客服'
+          }
+        }
+        if (self.pushStaff.length > 0) {
+          pushStaffs = {
+            'name': self.pushStaff[0].name,
+            'id': self.pushStaff[0].id,
+            'label': '地推'
+          }
+        }
+        saleStaffs ? self.selectedStaff.push(saleStaffs) : null
+        serviceStaffs ? self.selectedStaff.push(serviceStaffs) : null
+        pushStaffs ? self.selectedStaff.push(pushStaffs) : null
+        self.$emit('selectedStaff', self.selectedStaff)
+        if (this.clients.length) {
+          this.batchAssign()
+        }
+      },
+      batchAssign() {
+        let followPeople = this.selectedStaff.map((staff, index) => {
+          return staff.id
+        })
+        let data = {
+          followPeople,
+          id: this.clients
+        }
+        this.apiPost('customers/batch_follow', data).then((res) => {
+          if (res.code === 200) {
+            _g.toastMsg(this, 'success', '分配成功')
+            this.callback()
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      clickSelect(str) { // 点击tab选择角色
+        var self = this
+        self.pageType = str
+        if (str == 'salesman') {
+          self.saleActive = true
+          self.serviceActive = false
+          self.pushActive = false
+          self.getStaff('销售人员')
+        } else if (str == 'serviceman') {
+          self.saleActive = false
+          self.serviceActive = true
+          self.pushActive = false
+          self.getStaff('客服')
+        } else {
+          self.saleActive = false
+          self.serviceActive = false
+          self.pushActive = true
+          self.getStaff('地推')
+        }
+      },
+      getStaff(str) { // 根据角色获取人员
+        var self = this
+        self.staffList = []
+        self.staffName = str
+        var data = {
+          params: {
+            role: str,
+            page: self.currentPage
+          }
+        }
+        self.apiGet('customers/customer_follow', data).then((res) => {
+          if (res.code == 200) {
+            self.staffList = res.data.list
+            self.dataCount = res.data.total_pages * 10
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      searchStaff() { // 搜索人员
+        var self = this
+        self.staffList = []
+        var data = {
+          params: {
+            role: self.staffName,
+            page: self.currentPage,
+            keyword: self.keywords
+          }
+        }
+        self.apiGet('customers/customer_follow', data).then((res) => {
+          if (res.code == 200) {
+            self.staffList = res.data.list
+            self.dataCount = res.data.total_pages * 10
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      selectStaff(item, str) { // 选择人员
+        let { follow_num, count, id, name } = item
+        if (follow_num - count <= 0) {
+          return _g.toastMsg(this, 'warning', '该跟进人员的跟进客户数已达上限！')
+        }
+        if (this.clients.length) {
+          let { length: selLen } = this.clients
+          let maxFollow = follow_num - count
+          if (maxFollow - selLen < 0) {
+            return _g.toastMsg(this, 'warning', `该跟进人员最多还可以跟进${maxFollow}个客户`)
+          }
+        }
+        if (this.saleActive) {
+          this.saleStaff = [{ id, name, label: '销售人员' }]
+        } else if (this.serviceActive) {
+          this.serviceStaff = [{ id, name, label: '客服' }]
+        } else if (this.pushActive) {
+          this.pushStaff = [{ id, name, label: '地推' }]
+        }
+      },
+      filterStaff() { // 对获取到的父级页面的跟进人员进行处理
+        this.saleStaff = []
+        this.serviceStaff = []
+        this.pushStaff = []
+        for (var i = 0; i < this.followPeople.length; i++) {
+          const { label, name, id } = this.followPeople[i]
+          if (label === '销售人员') {
+            this.saleStaff.push({ id, name })
+          } else if (this.followPeople[i].label === '客服') {
+            this.serviceStaff.push({ id, name })
+          } else if (this.followPeople[i].label === '地推') {
+            this.pushStaff.push({ id, name })
+          }
+        }
+      }
+    },
+    created() {
+      this.getStaff('销售人员')
+      this.filterStaff()
+    },
+    mounted() {
+      var self = this
+    },
+    components: {
+      // info
+    },
+    mixins: [http]
+  }
+</script>

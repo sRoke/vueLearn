@@ -1,0 +1,60 @@
+<template>
+  <el-dialog ref="dialog" custom-class="w-300 h-200" :title="title">
+    <div class="ovf-auto">
+        <div class="fl w-80 m-b-10">录入销量</div>
+        <el-input v-model.trim="num"></el-input>
+    </div>
+    <div class="m-t-10">
+      <el-button class="fr m-r-20" @click="close()">取消</el-button>
+      <el-button type="primary" class="fr m-r-30" @click="edit()">确定</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['saleId', 'title', 'record'],
+    data() {
+      return {
+        id: null,
+        num: null
+      }
+    },
+    watch: {
+      'record' (to, from) {
+        this.num = this.record
+      }
+    },
+    methods: {
+      open() {
+        this.num = null
+        this.$refs.dialog.open()
+      },
+      close() {
+        this.$refs.dialog.close()
+      },
+      edit() {
+        this.apiPut('requires/' + this.id + '/sales/' + this.saleId, '', { sales_count: this.num }).then((res) => {
+          if (res.code == 200) {
+            _g.toastMsg(this, 'success', '录入成功')
+            setTimeout(() => {
+              // 财务记录--销量记录数据更新
+              this.$parent.getsaleData()
+              // 财务记录--提成记录数据更新
+              this.$parent.getbonusData()
+              // 关闭弹窗
+              this.$refs.dialog.close()
+            }, 200)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    created() {
+      this.id = this.$route.params.id
+    },
+    mixins: [http]
+  }
+</script>

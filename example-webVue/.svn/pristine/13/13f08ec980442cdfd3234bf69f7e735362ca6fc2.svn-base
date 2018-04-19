@@ -1,0 +1,20 @@
+[
+    {
+        "email": "lizhongxin@qq.com",
+        "name": "陈仲林先生",
+        "phone": "13533992535",
+        "position": "总经理"
+    },
+    {
+        "email": "xiaobai@qq.com",
+        "name": "小白先生",
+        "phone": "18354564545",
+        "position": "总经理"
+    },
+    {
+        "email": "xiongda@qq.com",
+        "name": "熊大先生",
+        "phone": "15387897544",
+        "position": "总经理"
+    }
+]

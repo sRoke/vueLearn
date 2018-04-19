@@ -1,0 +1,94 @@
+<template>
+	<div>
+		<el-button v-show="enableShow" size="small" @click="changeAttrInBtnGroup(1)">启用</el-button>
+		<el-button v-show="enableShow" size="small" @click="changeAttrInBtnGroup(0)">禁用</el-button>
+		<el-button v-show="deletesShow" size="small" @click="deleteDatasInBtnGroup()">删除</el-button>
+	</div>
+</template>
+
+<script>
+  import http from '../../assets/js/http'
+
+  export default {
+    props: ['selectedData', 'type'],
+    data() {
+      return {
+
+      }
+    },
+    methods: {
+      getUrl() {
+        return this.type
+      },
+      getSelectedIds() {
+        let array = []
+        _(this.selectedData).forEach((res) => {
+          if (this.type == 'groups') {
+            array.push(res.group_id)
+          } else if (this.type == 'users') {
+            array.push(res.u_id)
+          } else {
+            array.push(res.id)
+          }
+        })
+        return array
+      },
+      changeAttrInBtnGroup(cate) {
+        if (!this.selectedData.length) {
+          _g.toastMsg(this, 'warning', '请勾选数据')
+          return
+        }
+        let url = this.getUrl() + '/enables'
+        let data = {
+          ids: this.getSelectedIds(),
+          status: cate
+        }
+        this.apiPost(url, data).then((res) => {
+          if (res.code == 200) {
+            let word = ''
+            if (cate == 1) {
+              word = '启用'
+            } else {
+              word = '禁用'
+            }
+            _g.toastMsg(this, 'success', word + '成功')
+            setTimeout(() => {
+              _g.reloadPage(this)
+            }, 1500)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      deleteDatasInBtnGroup() {
+        if (!this.selectedData.length) {
+          _g.toastMsg(this, 'warning', '请勾选数据')
+          return
+        }
+        let url = this.getUrl() + '/deletes'
+        let data = {
+          ids: this.getSelectedIds()
+        }
+        this.apiPost(url, data).then((res) => {
+          if (res.code == 200) {
+            _g.toastMsg(this, 'success', res.data)
+            setTimeout(() => {
+              _g.reloadPage(this)
+            }, 1500)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    computed: {
+      enableShow() {
+        return _g.getHasRule(this.type + '-enables')
+      },
+      deletesShow() {
+        return _g.getHasRule(this.type + '-deletes')
+      }
+    },
+    mixins: [http]
+  }
+</script>

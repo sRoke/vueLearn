@@ -1,0 +1,248 @@
+<template>
+  <el-dialog ref="dialog"
+             title="选择分类"
+             class="category-dialog"
+             v-model="dialogVisible">
+  
+    <el-form ref="form"
+             :rules="rules"
+             :model="categoryForm">
+  
+      <el-form-item prop="first"
+                    label="一级类目"
+                    :required="true"
+                    label-width="100px">
+        <el-radio-group v-model="selectedFirst">
+          <el-radio v-for="item in firstLevels"
+                    :label="item.id">
+            {{ item.name }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+  
+      <el-form-item prop="second"
+                    label="二级类目"
+                    v-if="showSecond"
+                    label-width="100px">
+        <el-checkbox-group v-model="selectedSecond">
+          <el-checkbox v-for="item in secondLevels"
+                       :label="item.id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+      <el-form-item prop="third"
+                    v-if="showThird"
+                    v-for="third in thirdLevels"
+                    :label="third.name"
+                    label-width="100px">
+        <el-checkbox-group v-model="selectedThird">
+          <el-checkbox v-for="item in third.child"
+                       :label="item.id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+    </el-form>
+  
+    <div slot="footer"
+         class="dialog-footer selected-row">
+      <el-button @click="dialogVisible = false">取消</el-button>
+      <el-button type="primary"
+                 v-if="addMode"
+                 @click="submit()">添加</el-button>
+      <el-button type="primary"
+                 v-else
+                 @click="submit()">保存</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<style>
+.staff-dialog .el-dialog {
+  min-width: 760px;
+}
+
+.el-radio-group .el-radio {
+  margin: 10px 10px 0 10px;
+}
+
+.el-dialog__wrapper.category-dialog .el-checkbox {
+  margin-left: 10px;
+}
+
+.el-dialog__wrapper.category-dialog .el-form-item__label {
+  margin-right: 0 !important;
+}
+</style>
+
+<script>
+/**
+ * ---------------- Usage ----------------
+
+  <category ref="DOM的key"
+            v-if="对话框是否可见(bool)"
+            :type="添加或编辑模式(string:'add' or 'edit')"
+            :handleSubmit="处理添加:function(category)"
+            :handleEdit="处理编辑:function(category)"
+            :category-list="源数据:object(树形结构)">
+  </category>
+
+ * ---------------- Usage ----------------
+ * **/
+import options from 'assets/json/category-option.json'
+import http from 'assets/js/http'
+import _ from 'lodash'
+export default {
+  props: ['categoryList', 'type', 'handleSubmit', 'handleEdit'],
+  data() {
+    return {
+      dialogVisible: false,
+      selectedFirst: null,
+      selectedSecond: [],
+      selectedThird: [],
+      firstLevels: [],
+      secondLevels: [],
+      thirdLevels: [],
+      categoryForm: {
+        first: null,
+        second: [],
+        third: []
+      },
+      results: {}
+    }
+  },
+  watch: {
+    selectedFirst(val) {
+      this.selectFirst(val)
+    },
+    selectedSecond(val) {
+      this.selectSecond(val)
+    },
+    selectedThird(val) {
+      this.selectThird(val)
+    }
+  },
+  methods: {
+    fetchProductTypes() { // 请求一级类目数据
+      this.firstLevels = options
+      // this.apiGet('classifications').then(res => {
+      //   if (res.code === 200) {
+      //     this.firstLevels = res.data
+      //   } else {
+      //     _g.dealError(this, res)
+      //   }
+      // })
+    },
+    selectFirst(val) { // 设置一级类目
+      this.selectedFirst = val
+      this.selectedSecond = []
+      this.selectedThird = []
+      this.secondLevels = []
+      let second = _.find(this.firstLevels, { id: val })
+      this.secondLevels.push(...second.child)
+      this.results = {
+        id: val,
+        name: _.find(this.firstLevels, { id: val }).name,
+        child: []
+      }
+      if (this.editMode) {
+        this.selectedSecond = _.map(this.categoryList.child, 'id') || []
+      }
+    },
+    selectSecond(secondList) { // 设置二级类目
+      this.thirdLevels.splice(0, this.thirdLevels.length)
+      this.$set(this.results, 'child', [])
+      this.secondLevels.forEach(item => {
+        if (_.includes(secondList, item.id)) {
+          this.results.child.push({
+            id: item.id,
+            name: item.name,
+            child: []
+          })
+          this.thirdLevels.push(item)
+        }
+      })
+      if (this.editMode) {
+        this.categoryList.child.map(item => {
+          let arr = _.map(item.child, 'id') || []
+          this.selectedThird.push(...arr)
+        })
+      }
+    },
+    selectThird(val) { // 设置三级类目
+      let number = 0
+      let checkIndexArr = []
+      if (!this.results) { // 没有结果时 直接返回
+        return
+      }
+      if (val.length === 0) { // 没有选择任何三级类别时，清空二级下的child
+        this.results.child.forEach(item => {
+          item.child = []
+        })
+        return
+      }
+      val.forEach(tid => {
+        let needReset = !(_.includes(checkIndexArr, number))
+        if (needReset) {
+          this.results.child[number].child = []
+        }
+        this.thirdLevels.forEach((third, index) => {
+          number = index
+          checkIndexArr.push(index)
+          let arr = _.map(third.child, 'id')
+          if (_.includes(arr, tid)) {
+            let category = _.find(third.child, { id: tid })
+            this.results.child[index].child.push(category)
+          }
+        })
+        let findList = _.unionBy(this.results.child[number].child, 'id')
+        this.results.child[number].child = findList
+      })
+    },
+    resetSelect() { // 重置所有已选择数据
+      this.selectedFirst = null
+      this.selectedSecond = []
+      this.selectedThird = []
+      this.results = {}
+    },
+    open() { // 打开模态框
+      this.resetSelect()
+      this.dialogVisible = true
+      this.$nextTick(() => {
+        this.selectedFirst = this.categoryList.id || null
+      })
+    },
+    destory() {
+      this.$refs.dialog.close()
+    },
+    submit() { // 确定
+      this.addMode ? this.handleSubmit({ ...this.results }) : null
+      this.editMode ? this.handleEdit({ ...this.results }) : null
+    },
+    getCurrent() { // 获取当前的结果
+      return this.results
+    }
+  },
+  computed: {
+    addMode() {
+      return this.type === 'add'
+    },
+    editMode() {
+      return this.type === 'edit'
+    },
+    showSecond() { // 是否显示二级类目
+      return this.selectedFirst || this.selectedSecond.length > 0
+    },
+    showThird() { // 是否显示三级类目
+      return this.selectedSecond.length > 0 || this.selectedThird.length > 0
+    }
+  },
+  created() {
+    this.fetchProductTypes()
+  },
+  mixins: [http]
+}
+</script>

@@ -1,0 +1,97 @@
+.top-menu:hover {
+	cursor: pointer;
+	background: #324057;
+	/*color: #20a0ff;*/
+}
+.top-menu:active, .left-menu:active {
+	color: #20a0ff;
+}
+.top-active {
+	color: #44B5DF
+}
+.top-menu, .left-menu {
+	user-select:none;
+	-webkit-user-select:none;
+	-moz-user-select:none;
+	-o-user-select:none;
+	-ms-user-select:none;
+}
+.left-menu:hover {
+	background: #42566C;
+}
+.pages {
+	position: absolute;
+	top: 20px;
+	right: -5px;
+}
+.btn-link,.btn-link-large {
+	display: inline-block;
+	line-height: 1;
+	color: #fff;
+	white-space: nowrap;
+	cursor: pointer;
+	text-align: center;
+	box-sizing: border-box;
+	margin-right: 10px;
+	padding: 7px 9px;
+	font-size: 12px;
+	border-radius: 4px;
+}
+.btn-link-large {
+	margin: 0;
+	padding: 10px 15px;
+	font-size: 14px;
+}
+.add-btn {
+	background: #4caf50
+}
+.add-btn:hover {
+	background: #66bb6a
+}
+.add-btn:active {
+	background: #43a047
+}
+.edit-btn {
+	background: #339df7
+}
+.edit-btn:hover {
+	background: #5bb1fa
+}
+.edit-btn:active {
+	background: #047ce2
+}
+.warn-btn {
+	background: #F7BA2A
+}
+.warn-btn:hover {
+	background: #f9c855
+}
+.warn-btn:active {
+	background: #dea726
+}
+.del-btn {
+	color: #fff;
+    background-color: #ff4949;
+    border-color: #ff4949;
+}
+.del-btn:hover {
+	background: #ff6d6d;
+    border-color: #ff6d6d;
+    color: #fff;
+}
+.del-btn:active {
+	background: #e64242;
+    border-color: #e64242;
+    color: #fff;
+}
+.user-menu {
+	position: absolute;
+	top: 0px;
+	right: 100px;
+}
+.loading-modal {
+  margin-left: 230px;
+  margin-top: 60px;
+  width: calc(100% - 230px) !important;
+  height: calc(100% - 60px) !important;
+}

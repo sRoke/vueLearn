@@ -1,0 +1,94 @@
+<template>
+  <div class="f1">
+    <el-card class="box-card base-card m-b-20">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">跟进人员</span>
+      </div>
+      <el-row>
+        <el-col :span="4"
+                v-for="item in tableData0">
+          <!--<div class="tx-c">-->
+          <span>{{ item.group_name }}：</span>
+          <el-tag type="primary" v-for="(items,index) in item.user">{{ items.user.u_name }}</el-tag>
+          <!--</div>-->
+        </el-col>
+      </el-row>
+    </el-card>
+  <br>
+  <br>
+  <el-table
+    :data="tableData1" border
+      style="width: 100%" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中"
+      row-class-name="tx-c">
+    <el-table-column label="跟进记录">
+      <el-table-column label="跟进时间" prop="create_time">
+      </el-table-column>
+      <el-table-column label="跟进人员" prop="user">
+      </el-table-column>
+      <el-table-column label="公司等级" prop="level">
+      </el-table-column>
+      <el-table-column label="跟进说明 " prop="content">
+      </el-table-column>
+      <el-table-column label="下次回访时间" prop="return_visit">
+      </el-table-column>
+    </el-table-column>
+  </el-table>
+  </div>
+</template>
+<style>
+  .f1 .el-table .el-table_1_column_26 .cell{
+    text-align: center;
+    height:  30px;
+    border-bottom: 1px solid #dcdcdc
+  }
+  .f1 .el-table .el-table_1_column_20 .cell{
+    text-align: center;
+    height: 30px;
+    border-bottom: 1px solid #dcdcdc
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  export default{
+    data() {
+      return {
+        fullscreenLoading: false,
+        cus_id: null,
+        tableData1: [],
+        tableData0: [],
+        followPeople: []
+      }
+    },
+    methods: {
+      // customers/{c_id}/follow_peoples
+      getData() {
+        this.apiGet('customers/' + this.cus_id + '/follow_peoples').then((res) => {
+          if (res.code == 200) {
+            // console.log(res.data)
+            // this.tableData1 = res.data.follow_record
+            this.tableData0 = res.data
+            // console.log(this.tableData0)
+          }
+        })
+        // customers/{c_id}/follow_records
+        this.apiGet('customers/' + this.cus_id + '/follow_records').then((res) => {
+          if (res.code == 200) {
+            // console.log(res.data)
+            // this.tableData1 = res.data.follow_record
+            this.tableData1 = res.data
+            // console.log(this.tableData0)
+          }
+        })
+      }
+    },
+    created() {
+      var self = this
+      self.cus_id = self.$route.params.id
+      // self.cus_id = 392511
+      // self.init()
+      this.getData()
+    },
+    mixins: [http]
+  }
+</script>

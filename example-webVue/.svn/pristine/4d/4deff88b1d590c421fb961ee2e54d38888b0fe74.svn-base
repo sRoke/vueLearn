@@ -1,0 +1,275 @@
+<template>
+  <div>
+  
+    <div class="m-b-20 ovf-hd">
+      <reset-btn class="fr m-l-10"
+                 :reset="handleClearFilter">
+      </reset-btn>
+      <div class="fr w-250">
+        <el-input v-model="params.keyword"
+                  placeholder="编号、公司、联系人、手机号">
+          <el-button slot="append"
+                     icon="search"
+                     @click.prevent="setRoute()">
+          </el-button>
+        </el-input>
+      </div>
+  
+      <div class="fr m-r-5">
+        <a class="btn-link-large del-btn"
+           @click="batchDelete">删除</a>
+      </div>
+  
+      <div class="fr m-r-5">
+        <a class="btn-link-large edit-btn"
+           @click="relate">关联</a>
+      </div>
+  
+      <div class="fr m-r-5">
+        <router-link to="add"
+                     class="btn-link-large add-btn">添加
+        </router-link>
+      </div>
+  
+    </div>
+  
+    <el-row>
+  
+      <el-col :span="12"
+              class="left-table">
+        <el-table :data="regData"
+                  highlight-current-row
+                  row-class-name="tx-c"
+                  @current-change="handleCurrentChange">
+          <el-table-column label="注册账号"
+                           class="top-title"
+                           header-align="center">
+            <el-table-column prop="num"
+                             label="注册编号"
+                             width="140"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="name"
+                             label="公司名称"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="demandServiceContacts.name"
+                             label="联系人"
+                             width="100"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="demandServiceContacts.phone"
+                             label="手机号码"
+                             width="120"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column label="操作"
+                             width="75"
+                             inline-template
+                             header-align="center">
+              <router-link :to="{ name: 'publicClientDetail', params: { id: row.id, path }}"
+                           class="btn-link edit-btn">查看
+              </router-link>
+            </el-table-column>
+          </el-table-column>
+        </el-table>
+      </el-col>
+  
+      <el-col :span="12"
+              class="right-table">
+        <el-table :data="publicData"
+                  row-class-name="tx-c"
+                  @selection-change="handleSelectionChange">
+          <el-table-column label="公海客户"
+                           class="top-title"
+                           header-align="center">
+            <el-table-column width="35"
+                             type="selection"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="num"
+                             label="注册编号"
+                             width="140"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="name"
+                             label="公司名称"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="demandServiceContacts.name"
+                             label="联系人"
+                             width="120"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="demandServiceContacts.phone"
+                             label="手机号码"
+                             width="120"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column label="操作"
+                             width="75"
+                             inline-template
+                             header-align="center">
+              <router-link :to="{ name: 'publicClientDetail', params: { id: row.id, path }}"
+                           class="btn-link edit-btn">查看
+              </router-link>
+            </el-table-column>
+          </el-table-column>
+        </el-table>
+      </el-col>
+  
+    </el-row>
+  
+  </div>
+</template>
+<script>
+import address from 'assets/js/address'
+import resetBtn from 'components/common/reset.vue'
+import http from 'assets/js/http'
+export default {
+  data() {
+    return {
+      fullscreenLoading: false,
+      selList: [],
+      regData: [],
+      publicData: [],
+      currentRow: null,
+      params: {
+        isAuth: true,
+        keyword: null
+      }
+    }
+  },
+  watch: {
+
+  },
+  methods: {
+    init() {
+      this.handleQuery()
+      this.fullscreenLoading = true
+      let params = this.getQuery
+      this.apiGet('customers', { params }).then((res) => {
+        this.fullscreenLoading = false
+        if (res.code == 200) {
+          this.regData = res.data.list
+        } else {
+          _g.dealError(self, res)
+        }
+      })
+    },
+    fetchPublicData() {
+      this.fullscreenLoading = true
+      let params = this.getQuery
+      this.apiGet('customers', { params }).then((res) => {
+        this.fullscreenLoading = false
+        if (res.code == 200) {
+          this.publicData = res.data.list
+        } else {
+          _g.dealError(self, res)
+        }
+      })
+    },
+    handleCurrentChange(val) {
+      this.currentRow = val
+      this.fetchPublicData()
+    },
+    handleClearFilter() {
+      this.params.keyword = ''
+    },
+    handleSelectionChange(val) { // 批量选择
+      this.selList = []
+      _(val).forEach((res, key) => {
+        this.selList.push(res.id)
+      })
+    },
+    batchDelete() {
+      if (!this.hasSelect) {
+        return _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+      let data = { ids: this.selList }
+      this.$confirm('确认批量删除操作?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.apiPost('customers/deletes', data).then((res) => {
+          if (res.code == 200) {
+            _g.reloadPage(this)
+            _g.toastMsg(this, 'success', '删除成功')
+          } else {
+            _g.dealError(self, res)
+          }
+        })
+      }).catch(() => {
+        // do cancel
+      })
+    },
+    relate() { // 关联帐号
+      if (!this.hasSelect) {
+        return _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+      if (!this.selList.length > 1) {
+        return _g.toastMsg(this, 'warning', '只能关联一个公海客户')
+      }
+      // to relate
+    },
+    setRoute() { // 设置路由
+      let query = this.setQuery
+      router.push({ path: '/client/publicClient/unRelative', query })
+      this.fetchPublicData()
+    },
+    handleQuery() {
+      let queryParams = this.$route.query
+      let hasQuery = Object.keys(queryParams).length > 0
+      for (let key in this.$route.query) {
+        this.$route.query[key] ? this.params[key] = this.$route.query[key] : null
+      }
+    }
+  },
+  computed: {
+    hasSelect() {
+      return this.selList.length !== 0
+    },
+    setQuery() {
+      let query = {}
+      for (let key in this.params) {
+        this.params[key] ? query[key] = this.params[key] : null
+      }
+      return query
+    },
+    getQuery() {
+      let query = {}
+      for (let key in this.$route.query) {
+        this.$route.query[key] ? query[key] = this.$route.query[key] : null
+      }
+      return query
+    }
+  },
+  created() {
+    this.init()
+  },
+  components: {
+    'reset-btn': resetBtn
+  },
+  mixins: [http]
+}
+</script>
+
+<style>
+.left-table {
+  padding-right: .5em;
+}
+
+.right-table {
+  padding-left: .5em;
+}
+
+.row-class {
+  cursor: pointer;
+}
+
+.left-table .el-table_1_column_1,
+.right-table .el-table_1_column_7 {
+  text-align: center;
+}
+</style>

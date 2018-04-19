@@ -1,0 +1,154 @@
+<template>
+  <div class="article1">
+    <el-dialog ref="dialog"> 
+      <el-form ref="form" :model="form" label-position="top" class="cle">
+      <el-form-item prop="type">
+        <template scope="scope">
+          <span class="s12">{{form.type}}</span>
+        </template>
+      </el-form-item>
+        <el-form-item label="资讯内容:" prop="content">
+          <div id="div1"></div>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="cancle()">取消</el-button>
+        <el-button type="primary" :disabled="disable" @click="submit()" :loading="isLoading">保存</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+<style>
+  .titles{
+    margin-top: -20px;
+    font-size: 30px;
+    margin-bottom: 50px;
+  }
+  .title_pro{
+    margin-left: -65px;
+    font-size: 26px;
+  }
+  .s12{
+    display: block;
+    text-align: center;
+    font-size: 20px;
+  }
+</style>
+<script>
+import http from '../../../assets/js/http'
+import Wangeditor from 'wangEditor'
+export default {
+  props: ['info'],
+  data() {
+    return {
+      isLoading: false,
+      yy: true,
+      disable: false,
+      editor: null,
+      form: {
+        content: '',
+        type: ''
+      },
+      timeout: null
+    }
+  },
+  methods: {
+    open(id) {
+      this.editInit()
+      this.form.id = id
+      this.isLoading = false
+      this.apiGet('feedback/' + this.form.id).then((res) => {
+        console.log(res.data)
+        if (res.code == 200) {
+          this.form = res.data
+          // console.log('1')
+          // console.log(this.form)
+        }
+        this.$refs.dialog.open(id)
+        if (this.editor) {
+          this.editor.$txt.html('')
+          this.editor.$txt.append(this.form.content)
+        }
+      })
+    },
+    cancle() {
+      this.$refs.dialog.close()
+    },
+    submit() { // 保存
+      this.isLoading = true
+      this.form.content = this.editor.$txt.html()
+      console.log(this.form.content)
+      this.apiPut('feedback/', this.form.id, this.form).then((res) => {
+        // console.log(this.form)
+        if (res.code == 200) {
+          _g.toastMsg(this, 'success', '编辑成功')
+          this.$refs.dialog.close()
+          this.$parent.getData()
+        } else {
+          _g.dealError(this, res)
+          this.isLoading = !this.isLoading
+        }
+      })
+    },
+    editInit() { // 创建富文本编辑器
+      // console.log('初始化')
+      if (document.getElementById('div1')) {
+        clearTimeout(this.timeout)
+        if (this.yy == true) {
+          this.yy = false
+          this.editor = new Wangeditor('div1')
+          this.editor.config.menus = [
+            'source',
+            '|',
+            'bold',
+            'underline',
+            'italic',
+            'strikethrough',
+            'eraser',
+            'forecolor',
+            'bgcolor',
+            '|',
+            'quote',
+            'fontfamily',
+            'fontsize',
+            'head',
+            'unorderlist',
+            'orderlist',
+            'alignleft',
+            'aligncenter',
+            'alignright',
+            '|',
+            'link',
+            'unlink',
+            'table',
+            'emotion',
+            '|',
+            'img',
+            'video',
+            'insertcode',
+            '|',
+            'undo',
+            'redo',
+            'lineheight'
+          ]
+          this.editor.config.uploadImgUrl = window.HOST + 'Wangeditor'
+          this.editor.config.uploadImgFns.onload = (resultText, xhr) => {
+            this.editor.command(null, 'insertHtml', '<img src=' + resultText + ' style="max-width:100%;"/>')
+          }
+          this.editor.create()
+          this.editor.$txt.html('')
+          this.editor.$txt.append(this.form.content)
+        }
+      } else {
+        this.timeout = setTimeout(() => {
+          this.editInit()
+        }, 1000)
+      }
+    }
+  },
+  mounted() {
+    // this.editInit()
+  },
+  mixins: [http]
+}
+</script>

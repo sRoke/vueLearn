@@ -1,0 +1,837 @@
+<template>
+  <div class="m-t-10 fz-14" style="width: 100%">
+    <div class="tx-c fz-18" style="width: 100%; font-weight: bold;">{{title}}</div>
+    <div class="m-t-20">
+      <el-row :gutter="20">
+        <el-col :span="11">
+          <div class="tx-c"><span class="labelTitle">甲方：</span>{{contract.party_a_info.company}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">注册地址：</span>{{contract.party_a_info.address}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">电话：</span>{{contract.party_a_info.phone}}</div>
+        </el-col>
+        <el-col :span="2">
+          <div class="con-line"></div>
+        </el-col>
+        <el-col :span="11">
+          <div class="tx-c"><span class="labelTitle">乙方：</span>{{contract.party_b_info.company}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">注册地址：</span>{{contract.party_b_info.address}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">电话：</span>{{contract.party_b_info.phone}}</div>
+        </el-col>
+      </el-row>
+    </div>
+    <div class="m-t-30 con-title">一、设计费用</div>
+    <div v-if="model == '1'">
+      <div class="m-t-20 con-text">1、项目总金额￥{{(contract.balance_amount + contract.pre_pay).toFixed(2)}}元</div>
+      <div class="m-t-20 con-text">2、预付款￥{{(contract.pre_pay + 0).toFixed(2)}}元+尾款￥{{(contract.balance_amount + 0).toFixed(2)}}元</div>
+    </div>
+    <div v-else>
+      <div class="m-t-20 con-text">1、项目总金额￥{{(contract.balance_amount + contract.pre_pay).toFixed(2)}}元+销量提成</div>
+      <div class="m-t-20 con-text service-table" style="width: 100%">
+        <el-row :gutter="20">
+        <el-col :span="4">
+          <div>2、销量提成方案</div>
+        </el-col>
+        <el-col :span="9">
+          <el-table
+            :data="tableData"
+            border
+            style="width: 100%" class="tx-c">
+            <el-table-column
+              label="销量范围（台）">
+              <template scope="scope">
+                <span v-if="scope.$index==0">0——{{scope.row.end_count}}</span>
+                <span v-else>{{scope.row.start_count}}——{{scope.row.end_count}}</span>
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="提成金额">
+              <template scope="scope" v-show="scope.row.start_count != null">
+                {{scope.row.amount}}/台
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-col>
+        </el-row>
+      </div>
+    </div>
+    <el-form ref="form" :model="editData" :rules="rules" label-width="0px">
+      <div class="m-t-30 con-title">二、结算方式</div>
+      <div class="m-t-20 con-box p-t-10 p-b-10 p-l-10 p-r-10">
+        <div class="con-text m-l-5 m-r-5">
+          1、自甲方客户完成第一阶段设计方案验收并回复满意后，乙方应开具正规增值税专用发票给甲方。甲方收到乙方增值税专用发票后的3个工作日内，甲方扣除项目佣金后向乙方支付项目启动金。
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5" v-show="model == 1">
+          2、尾款：自甲方客户完成此项目约定的设计成果验收后，乙方应开具正规增值税专用发票给甲方。甲方收到乙方增值税专用发票后的3个工作日内，扣除项目佣金后向乙方支付尾款。至此，甲乙双方交易完成。
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5" v-show="model == 2">
+          2、自本协议项下约定设计产品开发完成，并实现首笔产品销售订单之日起开始计算销售提成，以每季度为一个结算周期。甲方在每季度开始的第一个月15号之前按照上述约定的“销售提成计提方案”，将上一季度产品销售提成费用对账单以书面形式发给乙方确认。在乙方书面确认并提供增值税专用发票后的3个工作日内，甲方扣除项目佣金后将销售提成费用汇至乙方指定账户。
+        </div>
+        <div v-show="model == 2">
+          <div class="con-text m-t-10 m-l-5 m-r-5">
+            3、甲方可选择以下任一方式完结此协议约定项目的销量分成合作制：
+          </div>
+          <div class="con-text m-l-5 m-r-5">
+            3.1、自甲方向乙方支付产品销售提成费达到<el-input :disabled="!edit" v-model="editData.reach_month" class="w-60 litle-input"></el-input>个月（以甲方首次向乙方支付产品提成费之日起算）后，甲乙双方本次交易完成。
+          </div>
+          <div class="con-text m-l-5 m-r-5">
+            3.2、甲方一次性向乙方支付相关费用提前买断（结束销量分成合作制），具体金额如下：自甲乙双方签订本协议之日起，18 个月内买断的费用为人民币<el-input :disabled="!edit" v-model="editData.buyout_1" class="w-60 litle-input"></el-input>万，自第19个月至第30个月内买断的费用为人民币<el-input :disabled="!edit" v-model="editData.buyout_2" class="w-60 litle-input"></el-input>万,自第31个月至第42个月内买断的费用为人民币<el-input :disabled="!edit" v-model="editData.buyout_3" class="w-60 litle-input"></el-input>万。自甲方向乙方提出买断要求并按照上述费用约定支付相关买断费用之日起， 乙方不再向甲方收取此协议约定项目的销售提成费用。至此，甲乙双方本次交易完成。
+          </div>
+          <div class="con-text m-l-5 m-r-5">
+            3.3、关于上述买断费用，乙方须开具增值税专用发票给甲方。
+          </div>
+        </div>
+      </div>
+      <div class="m-t-30 con-title">三、产品评估（选填）</div>
+      <div class="m-t-20 con-box p-t-10 p-b-10" style="width: 100%;">
+        <div class="con-text m-l-5 m-r-5">
+          1、预计产品成本：￥<el-input :disabled="!edit" v-model="editData.cost.start" class="w-60 litle-input"></el-input>元至<el-input :disabled="!edit" v-model="editData.cost.end" class="w-60 litle-input"></el-input>元；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          2、预计售价：￥<el-input :disabled="!edit" v-model="editData.price.start" class="w-60 litle-input"></el-input>元至<el-input :disabled="!edit" v-model="editData.price.end" class="w-60 litle-input"></el-input>元；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          <div v-if="edit">
+            3、预计上市时间：
+            <el-date-picker
+              v-model="marketTime"
+              type="date"
+              @change='getmarketTime'
+              :disabled="false"
+              placeholder="选择日期"
+              :picker-options="pickerOptions"
+              size="small">
+            </el-date-picker>
+          </div>
+          <div v-else>
+            3、预计上市时间：<el-input :disabled="!edit" v-model="editData.market_time" class="w-100 litle-input"></el-input>；
+          </div>
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          <div v-if="edit">
+            4、设计结束时间：
+            <el-date-picker
+              v-model="endTime"
+              type="date"
+              :disabled="false"
+              @change='getendTime'
+              placeholder="选择日期"
+              :picker-options="pickerOptions"
+              size="small">
+            </el-date-picker>
+          </div>
+          <div v-else>
+            4、设计结束时间：<el-input :disabled="!edit" v-model="editData.end_time" class="w-100 litle-input"></el-input>；
+          </div>
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          5、预计销量：第一年：<el-input :disabled="!edit" v-model="editData.sales.first" class="w-60 litle-input"></el-input>万台（单位）；第二年：<el-input :disabled="!edit" v-model="editData.sales.second" class="w-60 litle-input"></el-input>万台（单位）；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          第三年：<el-input :disabled="!edit" v-model="editData.sales.third" class="w-60 litle-input"></el-input>万台（单位）；三年后：<el-input :disabled="!edit" v-model="editData.sales.after_third" class="w-60 litle-input"></el-input>万台（单位）；
+        </div>
+      </div>
+      <div class="m-t-30 con-title">四、产品信息</div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>设计方案</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design" class="contractMsg">
+            <el-checkbox-group v-model="contract.design">
+              <el-checkbox disabled class="m-w-65 m-t-5" label="10">外观设计</el-checkbox>
+              <el-checkbox disabled class="m-w-65 m-t-5" label="30">结构设计</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>设计类型</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design_type" class="contractMsg">
+            <el-radio-group v-model="editData.design_type">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="item in conDesignType" :label="item"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200 m-t-5" label="其他类型">其他类型<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="designTypeOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>设计输出</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design_output" class="contractMsg">
+            <el-checkbox-group v-model="editData.design_output">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="item in conDesignOutput" :label="item"></el-checkbox>
+              <el-checkbox :disabled="!edit" class="radio w-200 m-t-5" label="其他（副）">其他（副）<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="designOutputOther"></el-input></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>目标市场</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="market" class="contractMsg">
+            <el-checkbox-group v-model="editData.market">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="mar in conMarket" :label="mar"></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>产品定位</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="position" class="contractMsg">
+            <el-radio-group v-model="editData.position">
+              <el-radio :disabled="!edit" class="m-w-65 m-t-5"  v-for="po in conPosition" :label="po"></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>适用人群</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="applicable_people" class="contractMsg">
+            <el-checkbox-group v-model="editData.applicable_people">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="pe in conPeople" :label="pe"></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>主要材质</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="material" class="contractMsg">
+            <el-radio-group v-model="editData.material">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="ma in conMaterial" :label="ma"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200 m-t-5" label="其他">其他<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="materialOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>控制面板</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="control_panel" class="contractMsg">
+            <el-radio-group v-model="editData.control_panel">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="pa in conPanel" :label="pa"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200" label="其他">其他<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="panelOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>竞争对手</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="competitors">
+            <el-input :disabled="!edit" v-model="editData.competitors" type="textarea" :rows="3" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>外观尺寸</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="dimensions">
+            <el-input :disabled="!edit" v-model="editData.dimensions" type="textarea" :rows="3" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>功能及重点要求描述</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="detail">
+            <el-input :disabled="!edit" v-model="editData.detail" type="textarea" :rows="5" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-title">备注信息</div>
+      <div class="m-t-20 con-text">
+        1、此表中所述之“产品”，指经此协议项下设计方案及相关技术成果加工形成的产品。
+      </div>
+      <div class="m-t-20 con-text">
+        2、此表中所述之“单位”，为产品最小销售单位（台、个、部、件等）。
+      </div>
+      <div class="m-t-20 con-text">
+        3、本协议及附件所述之“季度”的定义为：第一季度=公历1-3月；第二季度=公历4-6月；第三季度=公历7-9月；第四季度=10-12月。
+      </div>
+      <div class="m-t-20 con-text">
+        4、本协议及附件所述之“首笔产品销售订单”的日期最迟不应晚于乙方通过协议项下产品主体或关键零部件等模具监测到的生产数量达到1000个（单位）之日。如乙方监测到的产品主体或关键零部件等生产数量达到1000个时，甲方仍未向乙方申报“首笔产品销售订单”，乙方有权要求甲方按照上述生产数量达到1000个的日期开始计算销售提成并按照此协议约定进行结算；
+      </div>
+      <div class="m-t-40">
+        <el-row :gutter="20">
+          <el-col :span="10" :offset="1" class="pos-rel">
+            <div><span class="labelTitle">甲方：</span>{{contract.party_a_info.company}}</div>
+            <div class="m-t-10"><span class="labelTitle">时间：</span>{{contract.party_a_time}}</div>
+            <div class="agreedIcon" v-show="contract.party_a_status == 1"></div>
+            <div class="unagreedIcon" v-show="contract.party_a_status == 2"></div>
+          </el-col>
+          <el-col :span="2">
+            <div class="con-line2"></div>
+          </el-col>
+          <el-col :span="10" class="pos-rel">
+            <div><span class="labelTitle">乙方：</span>{{contract.party_b_info.company}}</div>
+            <div class="m-t-10"><span class="labelTitle">时间：</span>{{contract.party_b_time}}</div>
+            <div class="agreedIcon" v-show="contract.party_b_status == 1"></div>
+            <div class="unagreedIcon" v-show="contract.party_b_status == 2"></div>
+          </el-col>
+        </el-row>
+      </div>
+      <div class="m-t-40 m-b-20 tx-c" style="width: 100%" v-show="allEdit">
+        <div v-show="!edit">
+          <div v-if="agreedStatus">
+            <el-button
+              type="text"
+              size="small"
+              @click="getAgreement()" class="con-underline">
+              《来设计平台设计合作协议》
+            </el-button>
+          </div>
+          <div v-else>
+            <el-checkbox-group v-model="isAgreed">
+              <el-checkbox name="isAgreed" label="1">
+                我已阅读并同意
+                <el-button
+                  type="text"
+                  size="small"
+                  @click="getAgreement()" class="con-underline">
+                  《来设计平台设计合作协议》
+                </el-button>
+              </el-checkbox>
+            </el-checkbox-group>
+            <div class="m-t-20">
+              <el-button
+                @click="agreed(0)">
+                拒绝签署
+              </el-button>
+              <el-button
+                type="primary"
+                @click="agreed(1)">
+                同意合同
+              </el-button>
+            </div>
+          </div>
+        </div>
+        <el-form-item v-show="edit">
+          <el-checkbox v-model="postAgree">
+            我已阅读并同意
+            <el-button
+              type="text"
+              size="small"
+              @click="getAgreement()" class="con-underline">
+              《来设计平台设计合作协议》
+            </el-button>
+          </el-checkbox>
+          <div class="m-t-20">
+            <el-button
+              type="primary"
+              @click="postContract(0)"
+              v-show="!again">
+              确认无误，发起合同
+            </el-button>
+            <el-button
+              type="primary"
+              @click="postContract(1)"
+              v-show="again">
+              确认无误，重新发起合同
+            </el-button>
+          </div>
+        </el-form-item>
+      </div>
+      <div class="m-t-40 m-b-20 tx-c" style="width: 100%" v-show="!allEdit">
+        <el-button
+          type="text"
+          size="small"
+          @click="getAgreement" class="con-underline">
+          《来设计平台设计合作协议》
+        </el-button>
+      </div>
+    </el-form>
+    <agree ref="agree" :msg="agreement"></agree>
+  </div>
+</template>
+<style type="text/css">
+  .w-60 {
+    width: 60px;
+  }
+  .m-t-40 {
+    margin-top: 40px;
+  }
+  .con-line {
+    width: 1px;
+    height: 80px;
+    background: #333333;
+    margin: 0 auto;
+  }
+  .con-underline {
+    text-decoration: underline;
+  }
+  .con-line2 {
+    width: 1px;
+    height: 55px;
+    background: #333333;
+    margin: 0 auto;
+  }
+  .con-title {
+    width: 100%;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .con-text {
+    width: 100%;
+  }
+  .con-box {
+    border: 1px solid #666666;
+    background: #ffffff;
+  }
+  .con-tx-red {
+    color: #CC3333;
+  }
+  .w-620 {
+    width: 620px;
+  }
+  .m-w-65 {
+    min-width: 65px;
+  }
+  .litle-input input{
+    border: 0;
+    background: #ffffff !important;
+    padding: 0 5px;
+    height: 20px;
+    border-bottom: 1px solid red !important;
+    border-radius: 0;
+    text-align: center;
+    color: #333333 !important;
+  }
+  .agreedIcon {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    margin-left: -44px;
+    width: 88px;
+    height: 70px;
+    background: url(../../../assets/images/icon.png) no-repeat 0 0;
+    background-size: 500px;
+  }
+  .unagreedIcon {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    margin-left: -44px;
+    width: 88px;
+    height: 70px;
+    background: url(../../../assets/images/icon.png) no-repeat -115px 0;
+    background-size: 500px;
+  }
+  .contractMsg .el-checkbox-group .el-checkbox:first-child, .contractMsg .el-radio-group .el-radio:first-child{
+    margin-left: 15px;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import agree from './agree.vue'
+  export default {
+    props: ['conId', 'model', 'edit'],
+    data() {
+      return {
+        pickerOptions: {
+          disabledDate(time) {
+            return time.getTime() < Date.now() - 8.64e7
+          }
+        },
+        id: null,
+        editData: {
+          design: [],
+          design_type: '',
+          design_output: [],
+          applicable_people: [],
+          market: [],
+          position: '',
+          material: '',
+          control_panel: '',
+          competitors: '',
+          detail: '',
+          dimensions: '',
+          cost: {
+            end: null,
+            start: null
+          },
+          end_time: '',
+          market_time: '',
+          price: {
+            end: null,
+            start: null
+          },
+          sales: {
+            after_third: null,
+            first: null,
+            second: null,
+            third: null
+          },
+          buyout_1: null,
+          buyout_2: null,
+          buyout_3: null,
+          reach_month: null
+        },
+        rules: {
+          design_type: [
+            { required: true, message: '请选择设计类型' }
+          ],
+          design_output: [
+            { required: true, message: '请选择设计输出' }
+          ],
+          applicable_people: [
+            { required: true, message: '请选择适用人群' }
+          ],
+          market: [
+            { required: true, message: '请选择目标市场' }
+          ],
+          position: [
+            { required: true, message: '请选择产品定位' }
+          ],
+          material: [
+            { required: true, message: '请选择主要材质' }
+          ],
+          control_panel: [
+            { required: true, message: '请选择控制面板' }
+          ],
+          competitors: [
+            { required: true, message: '请输入竞争对手' }
+          ],
+          detail: [
+            { required: true, message: '请输入功能及重点要求描述' }
+          ],
+          dimensions: [
+            { required: true, message: '请输入外观尺寸' }
+          ]
+        },
+        title: '',
+        contract: {
+          party_a_info: {
+            address: '',
+            company: ''
+          },
+          party_b_info: {
+            address: '',
+            company: ''
+          }
+        },
+        tableData: [],
+        isAgreed: ['1'],
+        postAgree: true,
+        agreedStatus: true,
+        agreement: '',
+        again: false,
+        allEdit: false,
+        conMarket: [],
+        conMaterial: [],
+        conPosition: [],
+        conPeople: [],
+        conPanel: [],
+        conDesignType: [],
+        conDesignOutput: [],
+        designTypeOther: '',
+        designOutputOther: '',
+        materialOther: '',
+        panelOther: '',
+        endTime: '',
+        marketTime: ''
+      }
+    },
+    watch: {
+      'model' (to, from) {
+        if (this.model == 1) {
+          this.title = '客户定制项目制合同（即：项目制）'
+        } else {
+          this.title = '产品设计合伙人制合同（即：销量分成制）'
+        }
+      },
+      'conId' (to, from) {
+        if (this.conId != '') {
+          this.getContarct()
+        } else {
+          this.getBase()
+        }
+      }
+    },
+    mounted() {
+      console.log(this.conId)
+      if (this.conId != null) {
+        if (this.conId != '') {
+          this.getContarct()
+        } else {
+          this.getBase()
+        }
+      } else {
+        this.getBase()
+      }
+      if (this.model == 1) {
+        this.title = '客户定制项目制合同（即：项目制）'
+      } else {
+        this.title = '产品设计合伙人制合同（即：销量分成制）'
+      }
+    },
+    methods: {
+      getmarketTime(time) {
+        this.marketTime = time
+      },
+      getendTime(time) {
+        this.endTime = time
+      },
+      // 发起合同
+      postContract(num) {
+        let updata = this.editData
+        // updata.end_time = moment(this.endTime).format('YYYY-MM-DD')
+        // updata.market_time = moment(this.marketTime).format('YYYY-MM-DD')
+        if (this.model == 2) {
+          if ((this.editData.buyout_1 == null) ||
+            (this.editData.buyout_2 == null) ||
+            (this.editData.buyout_3 == null) ||
+            (this.editData.reach_month == null)) {
+            _g.toastMsg(this, 'warning', '请输入完整的结算方式')
+            return
+          }
+        }
+        if (this.editData.design_type == '其他类型') {
+          if (this.designTypeOther.trim() == '') {
+            _g.toastMsg(this, 'warning', '请输入设计类型')
+            return
+          } else {
+            updata.design_type = this.designTypeOther
+          }
+        }
+        if (this.editData.design_output == '其他（副）') {
+          if (this.designOutputOther.trim() == '') {
+            _g.toastMsg(this, 'warning', '请输入设计输出')
+            return
+          } else {
+            updata.design_output = this.designOutputOther
+          }
+        }
+        if (this.editData.material == '其他') {
+          if (this.materialOther.trim() == '') {
+            _g.toastMsg(this, 'warning', '请输入主要材质')
+            return
+          } else {
+            updata.material = this.materialOther
+          }
+        }
+        if (this.editData.control_panel == '其他') {
+          if (this.panelOther.trim() == '') {
+            _g.toastMsg(this, 'warning', '请输入控制面板')
+            return
+          } else {
+            updata.control_panel = this.panelOther
+          }
+        }
+        if (!this.postAgree) {
+          _g.toastMsg(this, 'warning', '您未同意《来设计平台设计合作协议》')
+          return
+        }
+        this.$refs.form.validate((pass) => {
+          if (pass) {
+            this.$confirm('确认发起合同?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+              if (num == 0) {
+                this.apiPost('requires/' + this.id + '/contracts', updata).then((res) => {
+                  _g.toastMsg(this, 'success', '发起成功')
+                  if (res.code == 200) {
+                    setTimeout(() => {
+                      location.reload()
+                    }, 200)
+                  } else {
+                    _g.dealError(this, res)
+                  }
+                })
+              } else {
+                this.editData.action_type = 'updateInfo'
+                this.apiPut('requires/' + this.id + '/contracts/' + this.contract.id, '', this.editData).then((res) => {
+                  _g.toastMsg(this, 'success', '发起成功')
+                  if (res.code == 200) {
+                    setTimeout(() => {
+                      location.reload()
+                    }, 200)
+                  } else {
+                    _g.dealError(this, res)
+                  }
+                })
+              }
+            }).catch(() => {
+            })
+          }
+        })
+      },
+      // 获取合同详情
+      getContarct() {
+        this.apiGet('requires/' + this.id + '/contracts/' + this.conId).then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.contract = res.data
+            if (res.data.party_b_status == 3) {
+              this.agreedStatus = false
+            } else {
+              this.agreedStatus = true
+            }
+            if ((res.data.party_b_status == 2) || (res.data.party_a_status == 2)) {
+              this.again = true
+            } else {
+              this.again = false
+            }
+            this.tableData = res.data.bonus_program
+            if (res.data.bonus_program) {
+              if ((res.data.bonus_program.length == 3) && (res.data.bonus_program[2].start_count != null)) {
+                this.tableData[2].end_count = '以上'
+              }
+            }
+            // this.endTime = moment(res.data.end_time, moment.ISO_8601)._d
+            // this.marketTime = moment(res.data.market_time, moment.ISO_8601)._d
+            this.editData = {
+              design: res.data.design,
+              design_type: res.data.design_type,
+              design_output: res.data.design_output,
+              applicable_people: res.data.applicable_people,
+              market: res.data.market,
+              position: res.data.position,
+              material: res.data.material,
+              control_panel: res.data.control_panel,
+              competitors: res.data.competitors,
+              detail: res.data.detail,
+              dimensions: res.data.dimensions,
+              cost: res.data.cost,
+              end_time: res.data.end_time,
+              market_time: res.data.market_time,
+              price: res.data.price,
+              sales: res.data.sales,
+              buyout_1: res.data.buyout_1,
+              buyout_2: res.data.buyout_2,
+              buyout_3: res.data.buyout_3,
+              reach_month: res.data.reach_month
+            }
+            if (!_.includes(this.conDesignType, res.data.design_type)) {
+              let designType = res.data.design_type
+              this.editData.design_type = '其他类型'
+              this.designTypeOther = designType
+            }
+            for (let i = res.data.design_output.length - 1; i >= 0; i--) {
+              if (!_.includes(this.conDesignOutput, res.data.design_output[i])) {
+                let designOutput = res.data.design_output[i]
+                this.editData.design_output[i] = '其他（副）'
+                this.designOutputOther = designOutput
+                return
+              }
+            }
+            this.editData.material = '其他'
+            this.materialOther = res.data.material
+            this.editData.control_panel = '其他'
+            this.panelOther = res.data.control_panel
+            for (var i = 0; i < this.conMaterial.length; i++) {
+              if (res.data.material == this.conMaterial[i]) {
+                this.editData.material = res.data.material
+                this.materialOther = ''
+              }
+            }
+            for (var j = 0; j < this.conPanel.length; j++) {
+              if (res.data.control_panel == this.conPanel[j]) {
+                this.editData.control_panel = res.data.control_panel
+                this.panelOther = ''
+              }
+            }
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取合同基本信息
+      getBase() {
+        this.apiGet('requires/' + this.id + '/contracts/base').then((res) => {
+          if (res.code == 200) {
+            this.contract = res.data
+            this.tableData = res.data.bonus_program
+            if ((res.data.bonus_program.length == 3) && (res.data.bonus_program[2].end_count == '')) {
+              this.tableData[2].end_count = '以上'
+            }
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 签署/拒绝合同
+      agreed(num) {
+        let agreedS = 90
+        if (num == 1) {
+          if (this.isAgreed.length == 0) {
+            _g.toastMsg(this, 'warning', '您未同意《来设计平台设计合作协议》')
+            return
+          }
+          agreedS = 80
+        }
+        this.apiPut('requires/' + this.id + '/contracts/' + this.conId, '', { action_type: 'updateStatus', status: agreedS }).then((res) => {
+          if (res.code == 200) {
+            _g.toastMsg(this, 'success', res.data)
+            setTimeout(() => {
+              location.reload()
+            }, 800)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取协议
+      getAgreement() {
+        this.$refs.agree.open()
+      },
+      // 打开协议详情
+      openAgreement() {
+        this.apiGet('require/contract/agreement').then((res) => {
+          if (res.code == 200) {
+            this.agreement = res.data
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    created() {
+      let auth = Lockr.get('authList')
+      let name = this.$route.name
+      if (auth) {
+        // 需求管理
+        if ((name == 'demandDetail') || (name == 'historyDetail')) {
+          if (typeof (auth.demand_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+        // 我的客户
+        if (name == 'myClienDemand') {
+          if (typeof (auth.myClient_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+        // 公海客户
+        if (name == 'publicClienDemand') {
+          if (typeof (auth.publicClient_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+        // 服务商列表
+        if (name == 'serviceDemandDetail') {
+          if (typeof (auth.service_edit) != 'undefined') {
+            this.allEdit = true
+          }
+        }
+      } else {
+        this.allEdit = true
+      }
+      this.id = this.$route.params.id
+      this.openAgreement()
+      this.conMarket = window.conMarket
+      this.conPosition = window.conPosition
+      this.conPeople = window.conPeople
+      this.conMaterial = window.conMaterial
+      this.conPanel = window.conPanel
+      this.conDesignType = window.conDesignType
+      this.conDesignOutput = window.conDesignOutput
+    },
+    components: {
+      agree
+    },
+    mixins: [http]
+  }
+</script>

@@ -1,0 +1,189 @@
+<template>
+  <el-dialog ref="dialog"
+             title="选择分类"
+             class="category-dialog"
+             v-model="dialogVisible">
+  
+    <el-form ref="form"
+             :rules="rules"
+             :model="ruleForm"
+             label-width="100px">
+  
+      <el-form-item prop="first"
+                    label="一级类目">
+        <el-radio-group v-model="ruleForm.first">
+          <el-radio v-for="item in firstLevels"
+                    :label="item.id">
+            {{ item.name }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+  
+      <el-form-item prop="second"
+                    label="二级类目"
+                    v-if="showSecond">
+        <el-checkbox-group v-model="ruleForm.second">
+          <el-checkbox v-for="item in secondLevels"
+                       :label="item.product_id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+      <el-form-item prop="third"
+                    label="三级类目"
+                    v-if="showThird">
+        <el-checkbox-group v-model="ruleForm.third">
+          <el-checkbox v-for="item in thirdLevels"
+                       :label="item.id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+    </el-form>
+  
+    <div slot="footer"
+         class="dialog-footer selected-row">
+      <el-button @click="cancel()">取消</el-button>
+      <el-button type="primary"
+                 @click="commit()">确认</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<style scoped>
+.staff-dialog .el-dialog {
+  min-width: 760px;
+}
+
+.el-radio-group .el-radio {
+  margin: 10px 10px 0 10px;
+}
+
+.el-checkbox {
+  margin-left: 10px;
+}
+</style>
+
+<script>
+import http from 'assets/js/http'
+import _ from 'lodash'
+export default {
+  props: ['callback'],
+  data() {
+    return {
+      dialogVisible: false,
+      firstLevels: [],
+      secondLevels: [],
+      thirdLevels: [],
+      ruleForm: {
+        first: null,
+        second: [],
+        third: []
+      },
+      results: [],
+      rules: {
+        first: [
+          { required: true, message: '请选择一个一级类目' }
+        ],
+        second: [
+          { type: 'array', required: false }
+        ],
+        third: [
+          { type: 'array', required: false }
+        ]
+      }
+    }
+  },
+  watch: {
+    'ruleForm.first'(val) {
+      this.resetFirst(val)
+      this.fetchClassification()
+    },
+    'ruleForm.second'(val) {
+      this.results[1] = val
+      this.loadThirdData(val)
+    },
+    'ruleForm.third'(val) {
+      this.results[2] = val
+    }
+  },
+  methods: {
+    init() {
+      this.apiGet('product_types').then(res => {
+        if (res.code === 200) {
+          this.firstLevels = res.data
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    fetchClassification() {
+      let type = this.ruleForm.first
+      this.apiGet(`products?type=${type}`).then(res => {
+        if (res.code === 200) {
+          this.secondLevels = res.data
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    loadThirdData(secondList) {
+      this.thirdLevels = []
+      const oldList = [...this.ruleForm.third]
+      this.ruleForm.third = []
+      _(secondList).forEach((second) => {
+        let data = this.secondLevels
+        let secondType = _.find(data, (o) => o.product_id === second)
+        const oldWordArr = [...secondType.word_arr]
+        let list = this.thirdLevels.concat(secondType.word_arr)
+        this.thirdLevels = list
+        _(oldList).forEach((item, index) => {
+          _(oldWordArr).forEach((reItem) => {
+            reItem.id == item ? this.ruleForm.third.push(item) : null
+          })
+        })
+      })
+    },
+    resetFirst(val) { // 重置数据
+      this.ruleForm.second = []
+      this.ruleForm.third = []
+      let first = [val]
+      this.results = [first]
+    },
+    open() { // 打开模态框
+      this.$refs.dialog.open()
+    },
+    close() { // 关闭模态框
+      this.$refs.dialog.close()
+      this.callback()
+    },
+    cancel() { // 关闭模态框
+      this.dialogVisible = false
+      this.callback()
+    },
+    commit() { // 确定
+      // console.log(this.results)
+    }
+  },
+  computed: {
+    showSecond() {
+      return this.ruleForm.first
+    },
+    showThird() {
+      return this.ruleForm.second.length > 0
+    }
+  },
+  created() {
+    this.init()
+  },
+  mounted() {
+
+  },
+  components: {
+
+  },
+  mixins: [http]
+}
+</script>

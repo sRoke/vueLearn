@@ -1,0 +1,500 @@
+<template>
+  <div>
+    <staff ref="staff" :followPeople="followPeoples" :clients="selList" :callback="batchCallback"></staff>
+    <div id="customerList" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+      <div class="m-b-20 ovf-hd">
+        <div class="fr m-l-30" v-if="isEdit">
+          <el-dropdown trigger="click" class="dropdown-container">
+            <span class="el-dropdown-link">
+              <el-button class="btn-link-large add-btn" icon="more"></el-button>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item style="color: #189BD9;" class="dropdown-menu">
+                <span class="up-and-down">
+                  <el-upload
+                    :action="uploadLink"
+                    :on-success="uploadSuccess"
+                    :on-error="uploadFail"
+                    :before-upload="loadFile"
+                    class="fl w-80">
+                    导入数据
+                  </el-upload>
+                </span>
+                <a :href="aLink" class="m-l-20 up-and-down" style="color: #189BD9" download="客户导入模板.xlsx">下载模板</a>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+          <failRes ref="failRes" :errorData="errorData"></failRes>
+        </div>
+        <div class="fl" v-if="isEdit">
+          <router-link class="btn-link-large add-btn" to="add">
+            <i class="el-icon-plus"></i>&nbsp;&nbsp;添加
+          </router-link>
+          <a class="btn-link-large edit-btn" @click='sureAssign'>批量分配</a>
+          <a class="btn-link-large del-btn" to="add" @click='sureDel'>批量删除</a>
+        </div>
+        <div class="fr w-300" v-if="isView">
+          <el-input placeholder="请输入公司、联系人、手机号" v-model="keywords">
+            <el-button slot="append" icon="search" @click.prevent="select()"></el-button>
+          </el-input>
+        </div>
+        <div class="fr publicClient" v-if="isView">
+          <el-select v-model="proValue" placeholder="请输入省" @change="select()">
+            <el-option
+              v-for="item in proOptions"
+              :label="item.label"
+              :value="item.label">
+            </el-option>
+          </el-select>
+          <el-select v-model="cityValue" placeholder="请输入市" class="m-l-20" @change="select()">
+            <el-option v-for="item in cityOptions"
+              :label="item.label"
+              :value="item.label">
+            </el-option>
+          </el-select>
+        </div>
+      </div>
+      <el-table :data="tableData" style="width: 100%;" 
+        @filter-change="applyFilter"
+        @selection-change="handleSelectionChange"
+        v-if="isView && loadingDone">
+        <el-table-column type="selection" :selectable='isSelect'></el-table-column>
+        <el-table-column prop="num" label="编号"></el-table-column>
+        <el-table-column label="公司名称" prop="name" show-overflow-tooltip></el-table-column>
+        <el-table-column label="客户级别" prop="p_ranking" :filter-multiple=false :filters="levelOptions" column-key="p_ranking">
+        </el-table-column>
+        <el-table-column label="联系人" prop="p_contact"></el-table-column>
+        <el-table-column label="手机号" prop="p_phone" show-overflow-tooltip></el-table-column>
+        <el-table-column label="跟进状态" prop="followStatus" :filter-multiple=false
+          :filters="followStatus"
+          column-key="followStatus">
+        </el-table-column>
+        <el-table-column label="跟进人员" prop="p_name" width="120" show-overflow-tooltip></el-table-column>
+        <el-table-column label="跟进记录" >
+          <template scope="scope">
+            <el-tooltip class="item" effect="dark" :content='scope.row.p_content' placement="top" popper-class="maxW">
+              <div class='ellips'>{{ scope.row.p_content }}</div>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="跟进时间" min-width="85" prop="followRecord.create_time"></el-table-column>
+        <el-table-column inline-template label="操作" :width="getOprWidth">
+          <div>
+            <span>
+              <router-link :to="{ name: 'publicClientDetail', params: { id: row.id, path }}" class="btn-link edit-btn">
+                查看
+              </router-link>
+              <router-link v-if="isEdit" :to="{ name: 'publicClientEdit', params: { id: row.id, path }}" class="btn-link edit-btn">
+                编辑
+              </router-link>
+            </span>
+          </div>
+        </el-table-column>
+      </el-table>
+
+      <div class="pos-rel p-t-20" v-show="showPagination" v-if="isView">
+        <div class="block pages m-b-10">
+          <el-pagination 
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :page-size="pageSize"
+          :current-page="currentPage"
+          :total="dataCount"
+          :page-sizes="[15, 30, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper" >
+          </el-pagination>
+        </div>
+      </div>
+      <!--<div class="fl m-t-10" v-if='isEdit'>-->
+        <!--<el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量操作</el-button>-->
+        <!--<el-button type="primary" size="small" v-show='isMDel' @click='sureAssign'>分配</el-button>
+        <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>删除</el-button>-->
+        <!--<el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>-->
+      <!--</div>-->
+    </div>
+  </div>
+</template>
+<style scoped>
+    .el-dropdown-menu__item:not(.is-disabled):hover{
+      background-color: transparent;
+    }
+    /*#customerList .el-table .cell{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }*/
+    #customerList .el-tag{
+      background-color: transparent;
+      border: none;
+      border-radius: 0px;
+      color: #000;
+      padding: 0px;
+      font-size: 14px;
+    }
+    .dropdown-container .el-button{
+      border: none;
+    }
+    #customerList .el-icon-more::before{
+      color: #fff;
+    }
+    #customerList .up-and-down{
+      color: #189BD9;
+    }
+    #customerList .up-and-down:hover{
+      color: #20A0FF;
+    }
+    #customerList .el-table-filter__checkbox-group .el-checkbox{
+      margin-left: 5px;
+    }
+    #customerList .el-table-filter__bottom{
+      text-align: center;
+    }
+    .up-and-down .el-upload__files{
+      display: none
+    }
+    #customerList .ellips{
+      width: 250px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    #customerList .publicClient{
+      margin-right: -5%;
+    }
+    #customerList .publicClient .el-select{
+      width: 36%;
+    }
+    .bg-bla{
+      background-color: rgba(0, 0, 0, 0);
+    }
+    .el-table{
+      cursor: pointer;
+    }
+</style>
+<script>
+  import address from '../../../assets/js/address'
+  import http from '../../../assets/js/http'
+  import failRes from './failRes.vue'
+  import staff from './staff.vue'
+  export default {
+    data() {
+      return {
+        show: Lockr.get('authList'),
+        keywords: '',
+        currentPage: 1,
+        dataCount: 0,
+        dataPages: 0,
+        pageSize: 15,
+        tableData: [],
+        aLink: '',
+        uploadLink: '',
+        status: null,
+        level: '',
+        errorData: [],
+        isEdit: false,
+        isView: false,
+        isFirst: true,
+        cityValue: '',
+        proValue: '',
+        proOptions: address.pro,
+        cityOptions: address['city']['广东省'],
+        flag: 2,
+        uploadPath: '',
+        path: '',
+        isMDel: false,
+        selList: [],
+        fullscreenLoading: false,
+        followPeoples: [],
+        followStatus: [
+          { text: '全部', value: '' },
+          { text: '已跟进', value: '1' },
+          { text: '未跟进', value: '2' }
+          // { text: '全部', value: '' },
+          // { text: '未联系', value: '1' },
+          // { text: '已跟进', value: '2' },
+          // { text: '需回访', value: '3' },
+          // { text: '无效', value: '4' }
+        ],
+        levelOptions: [
+          { text: '全部', value: '' },
+          { text: 'A热门客户', value: '1' },
+          { text: 'B普通客户', value: '2' },
+          { text: 'C潜在客户', value: '3' },
+          { text: 'D无法沟通', value: '4' }
+        ]
+      }
+    },
+    watch: {
+      proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+        var self = this
+        // self.cityValue = ''
+        self.cityOptions = address['city'][val]
+        self.proValue = val
+        if (!self.isFirst) {
+          self.cityValue = ''
+        } else {
+          self.isFirst = false
+        }
+      },
+      '$route' (to, from) { // 监听路由改变
+        var self = this
+        self.init()
+      }
+    },
+    methods: {
+      clear(selection, row) {
+        // console.log(selection)
+      },
+      isSelect(row, index) {
+        return true
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      sureAssign() { // 批量分配跟进人员
+        if (!this.hasSelect) {
+          return _g.toastMsg(this, 'warning', '请勾选数据')
+        }
+        this.$refs.staff.open()
+      },
+      sureDel() {
+        if (!this.hasSelect) {
+          return _g.toastMsg(this, 'warning', '请勾选数据')
+        }
+        this.$confirm('确认批量删除操作?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiPost('customers/deletes', { ids: this.selList }).then((res) => {
+            if (res.code == 200) {
+              // 重新获取列表数据
+              this.isMDel = false
+              this.getCustomerList()
+              _g.toastMsg(this, 'success', '删除成功')
+            } else {
+              _g.dealError(self, res)
+            }
+          })
+        }).catch(() => {
+          // do cancel
+        })
+      },
+      handleSelectionChange(val) {
+        this.selList = []
+        let arr = []
+        _(val).forEach((res, key) => {
+          this.selList.push(res.id)
+          arr = arr.concat(res.followPeople || [])
+        })
+        this.followPeoples = arr
+      },
+      select() { // 通过路由的参数保存页面的状态
+        const { keywords, currentPage, proValue, cityValue, level } = this
+        let query = {
+          city: cityValue || '',
+          keyword: keywords || '',
+          page: currentPage || 1,
+          province: proValue || '',
+          level
+        }
+        router.push({ path: '/client/publicClient/list', query })
+      },
+      init() { // 根据页面的状态获取页面数据
+        this.fullscreenLoading = true
+        var self = this
+        if (self.$route.fullPath === '/client/publicClient/list') {
+          self.keywords = ''
+          self.currentPage = 1
+          self.proValue = ''
+          self.cityValue = ''
+        } else {
+          self.keywords = self.$route.query.keyword || ''
+          self.currentPage = Number(self.$route.query.page) || 1
+          self.proValue = self.$route.query.province || ''
+          self.cityValue = self.$route.query.city || ''
+        }
+        self.path = self.$route.fullPath
+        self.getCustomerList()
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        if (this.currentPage != 1) {
+          this.currentPage = 1
+          this.select()
+        }
+        this.getCustomerList()
+      },
+      handleCurrentChange(val) { // 分页的选择
+        this.currentPage = val
+        this.select()
+      },
+      applyFilter(filter) { // 根据客户级别的条件或跟进状态的条件刷选
+        var self = this
+        // alert(_g.j2s(filter))
+        if (filter.p_ranking) {
+          if (filter.p_ranking.length === 0) {
+            self.level = ''
+          } else if (filter.p_ranking.length > 0) {
+            self.level = filter.p_ranking[0]
+          }
+        }
+        if (filter.followStatus) {
+          if (filter.followStatus.length === 0) {
+            self.status = ''
+          } else if (filter.followStatus.length > 0) {
+            self.status = filter.followStatus[0]
+          }
+        }
+        self.getCustomerList()
+      },
+      getCustomerList() { // 获取客户列表
+        !this.hasSelect ? this.fullscreenLoading = true : null
+        var self = this
+        if (self.isView) {
+          self.apiGet('customers?isAuth=all&' +
+          'keyword=' + encodeURIComponent(self.keywords) +
+          '&page=' + self.currentPage +
+          '&status=' + self.status +
+          '&pagesize=' + self.pageSize +
+          '&level=' + self.level +
+          '&province=' + encodeURIComponent(self.proValue) +
+          '&city=' + encodeURIComponent(self.cityValue)).then((res) => {
+            this.fullscreenLoading = false
+            if (res.code == 200) {
+              self.customerData(res)
+            } else {
+              _g.dealError(self, res)
+            }
+          })
+        }
+      },
+      customerData(res) { // 对获取的客户列表的信息进行处理
+        var self = this
+        if (res.code != 200) {
+          _g.dealError(self, res)
+        } else {
+          self.tableData = res.data.list
+          self.currentPage = res.data.current_page
+          self.dataCount = res.data.total_count
+          self.dataPages = res.data.total_pages
+          if (res.data.list) {
+            for (var j = 0; j < res.data.list.length; j++) {
+              const arr = ['', 'A热门客户', 'B普通客户', 'C潜在客户', 'D无法沟通']
+              const { level } = res.data.list[j]
+              self.tableData[j].p_ranking = arr[level]
+              let peoples = res.data.list[j].followPeople || []
+              if (peoples.length != 0) {
+                for (var i = 0; i < peoples.length; i++) {
+                  if (i === 0) {
+                    self.tableData[j].p_name = peoples[i].name
+                  } else {
+                    self.tableData[j].p_name += '、' + peoples[i].name
+                  }
+                }
+              } else {
+                self.tableData[j].p_name = '未分配人员'
+              }
+              if (res.data.list[j].demandServiceContacts) {
+                self.tableData[j].p_contact = res.data.list[j].demandServiceContacts.name
+                self.tableData[j].p_phone = res.data.list[j].demandServiceContacts.phone
+              }
+              if (res.data.list[j].followRecord) {
+                self.tableData[j].p_content = res.data.list[j].followRecord.content
+              }
+            }
+          }
+        }
+      },
+      download() { // 下载模板
+        var self = this
+        if (!self.isEdit) {
+          return
+        }
+        self.apiGet('customers/template').then((res) => {
+          // console.log('res = ', _g.j2s(res))
+          if (res.code == 200) {
+            self.aLink = imgUrl + res.data
+          } else {
+            _g.dealError(self, res)
+          }
+        })
+      },
+      uploadFail(err, res, file) { // 导入数据失败
+        _g.toastMsg(this, 'error', '导入失败')
+      },
+      loadFile(file) {
+        this.$loading({ customClass: 'bg-bla', text: '拼命加载中' })
+      },
+      batchCallback() {
+        this.getCustomerList()
+        this.clear()
+      },
+      uploadSuccess(res, file, fileList) { // 导入数据成功
+        var self = this
+        if (res.code == 200) {
+          let data = {
+            path: res.data
+          }
+          self.apiPost('customers/import', data).then((res) => {
+            // console.log('res = ', _g.j2s(res))
+            self.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+            if (res.code == 200) {
+              _g.toastMsg(self, 'success', '导入成功')
+              self.getCustomerList()
+              if (res.data.length) {
+                self.errorData = res.data
+                _g.toastMsg(this, 'error', '导入失败')
+                self.$refs.failRes.open()
+              }
+            } else {
+              _g.toastMsg(self, 'error', res.error)
+            }
+          })
+        } else {
+          self.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+          _g.toastMsg(self, 'error', res.error)
+        }
+      }
+    },
+    components: {
+      staff,
+      failRes
+    },
+    computed: {
+      getOprWidth() {
+        return this.isEdit ? 150 : 75
+      },
+      loadingDone() {
+        return !this.fullscreenLoading
+      },
+      hasSelect() {
+        return this.selList.length !== 0
+      },
+      hasNextPage() {
+        return this.dataPages > 1
+      },
+      showPagination() {
+        return this.hasNextPage && this.loadingDone
+      }
+    },
+    created() {
+      var self = this
+      // self.uploadUrl = window.HOST + 'Upload/data'
+      if (self.show == null || self.show['publicClient_view'] || self.show['publicClient_button']) {
+        self.isView = true
+      }
+      if (self.show == null || self.show['publicClient_edit']) {
+        self.isView = true
+        self.isEdit = true
+      }
+      self.uploadLink = window.HOST + 'Upload/excel'
+      // self.getCustomerList()
+      self.init()
+      self.download()
+      // console.log('Lockr=' + _g.j2s(Lockr.get('menus')))
+    },
+    mixins: [http]
+  }
+</script>

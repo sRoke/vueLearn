@@ -1,0 +1,586 @@
+<template>
+  <div class="reg-info">
+    <el-form :inline="true"
+             :model="form"
+             label-width="100px">
+  
+      <el-card class="box-card base-card m-b-20">
+        <div slot="header"
+             class="clearfix">
+          <span style="line-height: 36px;">注册信息</span>
+        </div>
+  
+        <el-row>
+          <el-form-item label="头像：">
+            <img :src="imgSrc" />
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="编号：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.code">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="注册时间：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.create_time">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="账号来源：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="source">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="公司名称：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.name">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row v-if="canEdit">
+          <el-form-item label="网站账号：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.account">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="公司电话：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.mobile">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="公司规模：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.size">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="公司地址：">
+            <el-input disabled
+                      class="w-400"
+                      v-model="form.address">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="公司简介：">
+            <el-input disabled
+                      class="w-400"
+                      type="textarea"
+                      v-model="form.textA">
+            </el-input>
+          </el-form-item>
+        </el-row>
+  
+        <el-row v-if="type === 2">
+          <el-col :span='6'>
+            <el-form-item label="成立日期：">
+              <el-date-picker disabled
+                              type="date"
+                              v-model="form.register_time">
+              </el-date-picker>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="法人：">
+              <el-input disabled
+                        v-model="form.legal"
+                        placeholder="请输入内容">
+              </el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="近三年营业额："
+                          class='turnover'
+                          label-width="120px">
+              <el-input disabled
+                        v-model="form.turnover"
+                        placeholder="请输入内容">
+              </el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="项目数：">
+              <el-input disabled
+                        v-model="form.project_num"
+                        placeholder="请输入内容">
+              </el-input>
+            </el-form-item>
+          </el-col>
+          </form>
+        </el-row>
+  
+        <el-row v-if="type === 2">
+          <el-col :span='6'>
+            <el-form-item label="负责人：">
+              <el-input disabled
+                        v-model="form.boss.name"
+                        placeholder="请输入名字"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="性别：">
+              <el-input disabled
+                        v-model="form.boss.sex"
+                        placeholder="请输入性别"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="学历："
+                          label-width="120px">
+              <el-input disabled
+                        v-model="form.boss.education"
+                        placeholder="请输入学历"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="出生日期：">
+              <el-date-picker disabled
+                              type="date"
+                              v-model="form.boss.both">
+              </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+  
+        <el-row v-if="type === 2">
+          <el-col :span='6'>
+            <el-form-item label="技术总监：">
+              <el-input disabled
+                        v-model="form.director.name"
+                        placeholder="请输入名字"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="性别：">
+              <el-input disabled
+                        v-model="form.director.sex"
+                        placeholder="请输入性别"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="学历："
+                          label-width="120px">
+              <el-input disabled
+                        v-model="form.director.education"
+                        placeholder="请输入学历"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="出生日期：">
+              <el-date-picker disabled
+                              type="date"
+                              v-model="form.director.both">
+              </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+  
+        <el-row v-if="type === 2">
+          <el-form-item label="公司标签：">
+            <el-tag type="success"
+                    v-for="(item,index) in form.tag"
+                    class="m-r-10">{{ item.label_name }}
+            </el-tag>
+          </el-form-item>
+        </el-row>
+  
+        <el-row>
+          <el-form-item label="银行卡：">
+  
+            <el-tag type="primary"
+                    class="m-r-10">开户行
+            </el-tag>
+            <span class="m-r-10">{{ form.bank_name }}</span>
+  
+            <el-tag type="primary"
+                    class="m-r-10">卡号
+            </el-tag>
+            <span class="m-r-10">{{ form.bank_account }}</span>
+  
+            <el-tag type="primary"
+                    class="m-r-10">户名
+            </el-tag>
+            <span class="m-r-10">{{ form.bank_user }}</span>
+  
+          </el-form-item>
+        </el-row>
+  
+      </el-card>
+  
+      <el-card class="box-card base-card m-b-20">
+        <div slot="header"
+             class="clearfix">
+          <span style="line-height: 36px;">营业品类</span>
+        </div>
+        <el-row class="m-b-20 m-l-10 m-r-10">
+          <el-table border
+                    :data="categoryData"
+                    row-class-name="tx-l">
+            <el-table-column label="序号"
+                             type="index"
+                             min-width="100px"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column label="营业品类"
+                             min-width="350"
+                             header-align="center">
+              <template scope="scope">
+                <p v-for="(item,index) in scope.row"
+                   :class="index ? 'm-l-20' : null">{{ item }}</p>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-row>
+      </el-card>
+  
+      <el-card class="box-card base-card m-b-20"
+               v-if="canEdit">
+        <div slot="header"
+             class="clearfix">
+          <span style="line-height: 36px;">联系人</span>
+        </div>
+        <el-row class="m-b-20 m-l-10 m-r-10">
+          <el-table border
+                    :data="contactList"
+                    row-class-name="tx-c">
+            <el-table-column prop="name"
+                             label="姓名"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="position"
+                             label="职位"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="phone"
+                             label="手机号"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="email"
+                             label="邮箱"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="weixin"
+                             label="微信"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="is_bind"
+                             label="绑定登录"
+                             header-align="center">
+              <template scope="scope">
+                {{ scope.row.is_bind ? '已绑定' : '未绑定' }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-row>
+      </el-card>
+  
+      <el-card class="box-card base-card m-b-20">
+        <div slot="header"
+             class="clearfix">
+          <span style="line-height: 36px;">认证证件</span>
+        </div>
+  
+        <el-row>
+          <el-col :span="4">
+            <el-form-item label="公司认证：">
+              {{ form.auth ? '已认证' : '未认证' }}
+            </el-form-item>
+          </el-col>
+          <el-col :span="20">
+            <el-form-item label="公司荣誉：">
+              <el-row type='flex'
+                      justify='start'>
+                <div v-for='item in form.medal'
+                     style="margin:0 5px;">
+                  <div class='tx-c'>
+                    <img width="75"
+                         height="75"
+                         :src='item.path' />
+                  </div>
+                  <div class="tx-c"
+                       v-text='item.name'
+                       style="font-size:.75em">
+                  </div>
+                </div>
+              </el-row>
+            </el-form-item>
+          </el-col>
+        </el-row>
+  
+        <el-row class="m-b-20 m-l-10 m-r-10">
+          <el-table border
+                    :data="form.dataRecord"
+                    row-class-name="tx-c">
+            <el-table-column prop="type"
+                             label="文件类型"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="data_name"
+                             label="文件名"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="introduction"
+                             label="说明"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column prop="name"
+                             label="上传者"
+                             header-align="center">
+            </el-table-column>
+            <el-table-column label="操作"
+                             header-align="center">
+              <template scope="scope">
+                <a download
+                   :href="scope.row.path"
+                   style="color: #20a0ff">下载</a>
+              </template>
+            </el-table-column>
+          </el-table>
+          </el-form-item>
+        </el-row>
+      </el-card>
+    </el-form>
+  
+  </div>
+</template>
+
+<style>
+.customerData .uphead .el-upload-list {
+  display: none;
+}
+
+.reg-info .headImg {
+  right: 20px;
+  width: 100px;
+  position: absolute;
+}
+
+.reg-info .el-form--inline .el-form-item__label {
+  float: left;
+}
+
+.customerData .el-form--inline .el-form-item {
+  display: block;
+}
+
+.customerData .el-input {
+  display: block;
+}
+
+.customerData .el-select {
+  width: 48%;
+}
+
+.customerData .base-info {
+  background-color: #66CCFF;
+  width: 100%;
+  height: 30px;
+  line-height: 30px;
+  font-size: 14px;
+  text-indent: 10px;
+}
+
+.customerData .customer-info {
+  background-color: #ccc;
+  width: 100%;
+  height: 25px;
+  line-height: 25px;
+  font-size: 14px;
+  border: #E0E6ED;
+  text-indent: 10px;
+}
+
+.customerData .base-info-cont {
+  border: 1px solid #BFCBD9;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.customerData .base-title {
+  padding: 5px 0px;
+  text-align: left;
+  text-indent: 10px;
+  border-bottom: 1px solid #BFCBD9;
+}
+
+.customerData .add-content {
+  color: #66CCFF;
+  cursor: pointer;
+  position: absolute;
+  top: 72px;
+  left: 35%;
+}
+
+.customerData .realse {
+  color: #66CCFF;
+  cursor: pointer;
+  margin-left: 15px;
+}
+
+.m-l-1 {
+  margin-left: 1%;
+}
+
+.uphead .el-upload__files {
+  display: none;
+}
+
+.textA .el-textarea__inner {
+  height: 100px;
+}
+
+.textB .el-textarea__inner {
+  width: 34%;
+  height: 100px;
+}
+
+.customerData .lineh-36 {
+  line-height: 36px;
+}
+
+.customerData .underline {
+  text-decoration: underline;
+}
+</style>
+
+<script>
+import address from 'assets/js/city-data.json'
+import levelOptions from 'assets/json/client_level.json'
+import http from 'assets/js/http'
+import head from 'assets/images/head.png'
+export default {
+  data() {
+    return {
+      authList: [],
+      loading: false,
+      head: head,
+      type: 1,
+      form: {
+        boss: { name: '' },
+        director: { name: '' }
+      },
+      categoryProps: {
+        'children': 'child',
+        'label': 'name'
+      }
+    }
+  },
+  methods: {
+    toggleLoading() {
+      this.loading = !this.loading
+    },
+    getCustomerInfo() { // 获取客户信息
+      this.toggleLoading()
+      let { userid, dsu_id } = this.$route.query
+      let id = userid || dsu_id
+      let url = this.demandOrService === 1 ? 'demand_user/' : 'service_user/'
+      this.apiGet(url + id).then((res) => {
+        this.toggleLoading()
+        if (res.code != 200) {
+          _g.dealError(this, res)
+        } else {
+          this.form = res.data
+          this.logo = res.data.logo
+          this.type = res.data.type
+          if (this.logo == 0) {
+            this.imgSrc = this.head
+          } else {
+            this.imgSrc = imgUrl + this.logo
+          }
+          _(res.data.medal).forEach(item => {
+            item.path = require(`assets/images/honor_icon/h${item.id}.png`)
+          })
+          _(res.data.dataRecord).forEach(item => {
+            item.path = imgUrl + item.path
+          })
+          // 处理省份城市
+          this.province = res.data.province || ''
+          this.city = res.data.city || ''
+          this.area = res.data.area || ''
+          this.address = res.data.address || ''
+          this.proCityVal = [this.province, this.city, this.area]
+          this.proCityVal1 = [this.province + '/' + this.city + '/' + this.area]
+          this.follow_num = res.data.follow_num
+          this.match = res.data.require
+          this.$emit('demandRecord', this.match) // 发送需求记录条数
+          this.form.code = res.data.code
+          this.form.account = res.data.account
+          this.form.create_time = res.data.create_time
+          switch (res.data.level) {
+            case 1: this.value = 'A热门客户'
+              break
+            case 2: this.value = 'B普通客户'
+              break
+            case 3: this.value = 'C潜在客户'
+              break
+            case 4: this.value = 'D无法沟通'
+              break
+          }
+          this.proValue = res.data.province
+          this.cityValue = res.data.city
+          this.contactList = res.data.demandServiceContacts
+          this.form.mobile = res.data.phone
+          this.form.size = res.data.size
+          this.form.textA = res.data.remark
+          this.categoryData = [..._g.formatCategory(res.data.business_category)]
+          if (!res.data.boss) {
+            this.form.boss = { name: '' }
+            this.form.director = { name: '' }
+          } else {
+            this.form.boss = res.data.boss
+          }
+        }
+      })
+    }
+  },
+  created() {
+    this.authList = Lockr.get('authList')
+    // this.getCustomerInfo()
+  },
+  computed: {
+    address() {
+      let { province, city, area, address } = this.form
+      return `${province}${city}${area}${address}`
+    },
+    source() {
+      return this.form.source === 1 ? '注册' : '系统添加'
+    },
+    canEdit() {
+      return this.authList == null || this.authList['myClient_edit'] || this.authList['publicClient_edit']
+    },
+    demandOrService() {
+      return this.$route.type
+    }
+  },
+  components: {
+  },
+  mixins: [http]
+}
+</script>

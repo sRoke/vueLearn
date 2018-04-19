@@ -1,0 +1,425 @@
+<template>
+  <div class="add_page">
+    <el-form ref="form" :model="form" label-width="150px">
+      <el-form-item label="作品名称:" prop="name" :rules="[
+        { required: true, message: '作品名称不能为空'}]">
+        <el-input v-model="form.name"></el-input>
+      </el-form-item>
+      <el-form-item label="所属公司:" prop="dsuId">
+        <span >{{company}}</span>
+          <el-button @click="choosed()">选择服务方</el-button>
+      </el-form-item>
+      <el-form-item label="作品品类:" prop="classId">
+        <el-select v-model="form.classId" placeholder="请选择品类">
+          <el-option v-for="item in options2" :label="item.name" :value="item.id">
+          </el-option>
+        </el-select>
+      </el-form-item>
+       <el-form-item label="Seo Title:" prop="seoTitle">
+        <el-input v-model="form.seoTitle" class="input_small"></el-input>
+      </el-form-item>
+       <el-form-item label="Seo Keyword:" prop="seoKeyword">
+        <el-input v-model="form.seoKeyword" class="input_small"></el-input>
+      </el-form-item>
+      <el-form-item label="Seo Description:" prop='seoDescription'>
+        <el-input v-model="form.seoDescription" class="input_small"></el-input>
+          </el-form-item>
+        </el-form-item>
+      <el-form-item label="缩略图:" prop="imgUrl">
+          <div class="ca_1">  
+          <div  class="v11">
+            <img :src="pic1"/>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess1"
+            :on-remove="handleRemove"
+            :show-upload-list="false"
+            :show-file-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary"><span>{{text1}}</span></el-button>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="轮播图:" prop="carousel" class="slide">
+        <div class="ca_1">  
+          <div v-for="(item,index) in showCarousel" label="index"  class="v12">
+            <img :src="item"/>
+            <i class="el-icon-circle-close" @click='deleted2(index)'></i>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess2"
+            :show-file-list="false"
+            :on-remove="handleRemove"
+            :show-upload-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary" v-show="ifFive">点击上传</el-button>
+            <div class="el-upload__tip" slot="tip" v-show="ifFive">只能上传jpg/png文件，且不超过500kb(最多上传5张)</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="详情页图片:" prop="album" class="slide">
+        <div class="ca_1">
+          <div v-for="(item,index) in showAlbum" label="index" class="v12">
+            <img :src="item"/>
+            <i class="el-icon-circle-close" @click='deleted3(index)' v-show="ifOnes"></i>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess3"
+            :on-remove="handleRemove"
+            :show-file-list="false"
+            :show-upload-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary" class="no1">点击上传</el-button>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="详情描述:" prop="description" width="300">
+        <div id="div2"></div>
+      </el-form-item>
+      <el-form-item label="状态:"  prop="status" :rules="[
+        { required: true, message: '请选择状态'}]">
+          <el-radio label="2" class="radio" v-model="form.status">已上架</el-radio>
+          <el-radio label="3" class="radio" v-model="form.status">已下架</el-radio>
+      </el-form-item>
+      <el-form-item label="排序" prop="sort" :label-width="formLabelWidth">
+        <el-input v-model="form.sort" placeholder="请输入0-1000的数字" class="input_small"></el-input>
+      </el-form-item>   
+      <el-form-item>
+        <el-button type="primary" @click="onSubmit()" :loading="isLoading">发布</el-button>
+        <el-button type="primary" @click="watch()">预览</el-button>
+        <el-button type="primary" @click="cancle()">返回</el-button>
+      </el-form-item>
+    </el-form>
+    <preview ref="preview" :url="propsImg"></preview>
+    <worksWatch ref="worksWatch" :info="form"></worksWatch>
+    <companyChoose ref="companyChoose" :company="company" v-on:delList="onChange" ></companyChoose>
+  </div>
+</template>
+<style>
+  .comp1{
+  width: 350px;
+  }
+  .works_img{
+    position:static;
+    display: block;
+    margin-top: 20px
+  }
+ .slide{
+  _height:180px;
+  min-height: 180px
+ }
+  .v12{
+    display: inline-block;
+    position: relative;
+  }
+  .v12 img{
+    max-width: 500px;
+    max-height: 500px;
+  }
+  .slide img{
+    width:200px;
+    height:100px;
+    float:left;
+    margin-left:10px;
+    border:gray 1px solid
+  }
+  .ca_1{
+    width: 100%;
+    min-height: 180px;
+    position:relative
+  }
+  .detial img{
+    position: relative; 
+  }
+  .slide img{
+    position: relative; 
+  }
+  .slide .el-icon-circle-close{
+    margin-top: 5px !important;
+    margin-left: -20px !important;
+  }
+  .detial .el-icon-circle-close{
+    position: absolute;
+    margin-top: 5px !important;
+    margin-left: -20px !important;
+  }
+  .add_page{
+    margin:  auto !important;
+    width: 800px
+  }
+  .fex{
+    float: left;
+    margin-right: 10px;
+    width: 200px;
+  }
+  .fex .el-dragger{
+    width: 200px;
+  }
+  .no1{
+    position: relative;
+    margin-bottom: 0px;
+    bottom: 0;
+  }
+</style>
+
+<script>
+import http from '../../../assets/js/http'
+import preview from './preview.vue'
+import companyChoose from './choose.vue'
+import worksWatch from './works_watch.vue'
+import Wangeditor from 'wangeditor'
+export default {
+  props: ['info'],
+  data() {
+    return {
+      isLoading: false,
+      company: '',
+      ifOne: false,
+      ifOnes: false,
+      ifFive: true,
+      editor: null,
+      options1: [],
+      options2: [],
+      uploadUrl: '',
+      fileList: [],
+      propsImg: '',
+      name: '',
+      radio: '2',
+      pic1: null,
+      showAlbum: [],
+      showCarousel: [],
+      text1: '点击上传',
+      form: {
+        name: '',
+        dsuId: '',
+        classId: '',
+        seoTitle: '',
+        seoKeyword: '',
+        seoKescription: '',
+        status: '2',
+        description: '',
+        imgUrl: '',
+        album: [],
+        carousel: [],
+        company: ''
+      }
+    }
+  },
+  methods: {
+    onChange(res) { // 所属公司发生改变时
+      // console.log(res)
+      if (res.length != 0) {
+        this.company = res[0].name
+        this.form.dsuId = res[0].id
+        this.form.company = this.company
+      }
+      console.log(this.company, this.form.dsuId)
+    },
+    choosed() { // 打开所属公司对话框
+      this.$refs.companyChoose.open()
+    },
+    deleted2(index) { // 删除轮播图
+      this.$confirm('是否移除这张图片', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.showCarousel.splice(index, 1)
+        this.form.carousel.splice(index, 1)
+        this.ifFive = true
+      })
+    },
+    deleted3(index) { // 删除详情页图片
+      // console.log(index)
+      this.$confirm('是否移除这张图片', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.showAlbum.splice(index, 1)
+        this.form.album.splice(index, 1)
+      })
+    },
+    onSubmit() { // 发布
+      this.isLoading = true
+      console.log(this.showCarousel)
+      this.form.dsu_id = this.form.dsuId
+      this.form.class_id = this.form.classId
+      this.form.seo_title = this.form.seoTitle
+      this.form.seo_keyword = this.form.seoKeyword
+      this.form.seo_description = this.form.seoDescription
+      this.form.img_url = this.form.imgUrl
+      this.form.description = this.editor.$txt.html()
+      this.$refs.form.validate((pass) => {
+        if (pass) {
+          if (this.form.sort >= 0 && this.form.sort <= 1000) {
+            this.apiPost('projects', this.form).then((res) => {
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '添加成功')
+                this.goback()
+              } else {
+                _g.dealError(this, res)
+                this.isLoading = !this.isLoading
+              }
+            })
+          } else if (this.form.sort == undefined) {
+            this.apiPost('projects', this.form).then((res) => {
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '添加成功')
+                this.goback()
+              } else {
+                _g.dealError(this, res)
+                this.isLoading = !this.isLoading
+              }
+            })
+          } else {
+            _g.toastMsg(this, 'warning', '排序为0-1000的数字')
+            this.isLoading = !this.isLoading
+          }
+        } else {
+          this.isLoading = !this.isLoading
+        }
+      })
+    },
+    cancle() {
+      this.goback()
+    },
+    goback() {
+      router.go(-1)
+    },
+    uploadSuccess1 (res, file, fileList1) { // 上传缩略图成功
+      // console.log(res)
+      // console.log(file)
+      // fileList1.splice(index, 1)
+      // console.log(fileList1)
+      this.text1 = '替换图片'
+      this.pic1 = window.imgUrl + res.data
+      this.form.imgUrl = res.data
+      // console.log(this.form.imgUrl)
+      // this.form.imgUrl = res.data
+      // let data = {
+      //   name: '图片',
+      //   url: window.imgUrl + res.data
+      // }
+      // if (this.fileList.length) {
+      //   this.fileList[0] = data
+      // } else {
+      //   this.fileList.push(data)
+      // }
+    },
+    uploadSuccess2 (res, file, fileList) { // 上传轮播图成功
+      // console.log(file)
+      // console.log(fileList)
+      this.ifOne = true
+      let url = {}
+      url = window.imgUrl + res.data
+      this.showCarousel.push(url)
+      if (this.form.carousel.length < 5) {
+        this.form.carousel.push(res.data)
+        if (this.form.carousel.length >= 5) {
+          this.ifFive = false
+        }
+      }
+    },
+    uploadSuccess3(res, file, fileList3) { // 上传详情页图片成功
+      this.ifOnes = true
+      let urls = {}
+      urls = window.imgUrl + res.data
+      this.showAlbum.push(urls)
+      console.log(urls)
+      this.form.album.push(res.data)
+    },
+    uploadFail(err, res, file) {
+      console.log('err = ', _g.j2s(err))
+      console.log('res = ', _g.j2s(res))
+    },
+    // handleRemove(file, fileList) {
+    //   this.form.imgUrl = ''
+    //   this.fileList.splice(file)
+    // },
+    viewPic() {
+      this.propsImg = this.fileList[0].url
+      this.$refs.preview.open()
+    },
+    continue_update() {
+    },
+    watch() { // 预览
+      this.form = this.form
+      this.form.description = this.editor.$txt.html()
+      this.$refs.worksWatch.open(this.form)
+    }
+  },
+  mounted() {
+    var yy = true
+    this.uploadUrl = window.HOST + 'Upload'
+    this.editor = new Wangeditor('div2') // 富文本编辑器实例化
+    this.editor.config.menus = [  // 设置富文本编辑器的菜单选项
+      'source',
+      '|',
+      'bold',
+      'underline',
+      'italic',
+      'strikethrough',
+      'eraser',
+      'forecolor',
+      'bgcolor',
+      '|',
+      'quote',
+      'fontfamily',
+      'fontsize',
+      'head',
+      'unorderlist',
+      'orderlist',
+      'alignleft',
+      'aligncenter',
+      'alignright',
+      '|',
+      'link',
+      'unlink',
+      'table',
+      'emotion',
+      '|',
+      'insertcode',
+      '|',
+      'undo',
+      'redo',
+      'lineheight'
+    ]
+    if (yy == true) {
+      this.editor.create()
+      yy == false
+    }
+    // console.log('马上获取')
+    // this.apiGet('service_user/basic').then((res) => {
+    //   if (res.code == 200) {
+    //     this.options1 = res.data
+    //     console.log(res.data)
+    //   } else {
+    //     _g.dealError(this, res)
+    //   }
+    // })
+    this.apiGet('classification/all').then((res) => {
+      if (res.code == 200) {
+        this.options2 = res.data
+      } else {
+        _g.dealError(this, res)
+      }
+    })
+  },
+  components: {
+    preview,
+    worksWatch,
+    companyChoose
+  },
+  mixins: [http]
+
+}
+</script>

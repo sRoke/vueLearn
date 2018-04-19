@@ -1,0 +1,637 @@
+<template>
+  <div id='serviceList'>
+    <el-row v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+    <div class="m-b-20 ovf-hd">
+      <div class="fr w-400">
+        <el-col :span='16'>
+          <el-input placeholder="请选择服务方、联系人、手机号" v-model="postData.keyword">
+            <el-button slot="append" icon="search" @click="search()"></el-button>
+          </el-input>
+        </el-col>
+        <el-col :span='2' class='m-l-10 m-r-5' >
+        <reset-btn 
+                 :reset="handleClearFilter"></reset-btn>
+        </el-col>
+        <el-col :span='4' class='m-l-20' v-if='service_edit' style="width:50px">
+        <div>
+          <el-dropdown trigger="click">
+            <span class="el-dropdown-link">
+              <el-button class="btn-link-large add-btn" icon="more"></el-button>
+            </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item class="dropdown-menu">
+                <span class="up-and-down">
+                  <el-upload
+                    :action='uploadUrl'
+                    :on-success="uploadSuccess"
+                    :on-error="uploadFail"
+                    :before-upload="loadFile"
+                    style='color: #189BD9'
+                    class="fl w-80">
+                    导入数据
+                  </el-upload>
+                </span>
+                <a :href="aLink" download="服务方导入模板.xlsx" style='color: #189BD9' class="m-l-20 up-and-down">下载模板</a>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+          <failRes ref="failRes" :errorData="errorData"></failRes>
+          </div>
+        </el-col>
+      </div>
+      <div class="fr service">
+        <el-select v-model="business_category" placeholder="请选择营业品类" @change="search()" class="selects m-r-10">
+          <el-option
+            v-for="item in sellType"
+            :label="item.name"
+            :value="item.id">
+          </el-option>
+        </el-select>
+        <el-select v-model="proValue" placeholder="请选择省" @change="search()" class="selects">
+          <el-option
+            v-for="item in proOptions"
+            :label="item.label"
+            :value="item.label">
+          </el-option>
+        </el-select>
+        <el-select v-model="cityValue" placeholder="请选择市" class="m-l-10 selects" @change="search()">
+          <el-option
+            v-for="item in cityOptions"
+            :label="item.label"
+            :value="item.label">
+          </el-option>
+        </el-select>
+        <el-input placeholder="请输入账号" v-model="account" class="w-200">
+          <el-button slot="append" icon="search" @click.prevent = "search()"></el-button>
+        </el-input>
+      </div>
+      <div class="fl" v-if='service_edit'>
+        <router-link class="btn-link-large add-btn" to="serviceAdd">
+          <i class="el-icon-plus"></i>&nbsp;&nbsp;添加
+        </router-link>
+      </div>
+    </div>
+    </el-row>
+    <el-table
+        ref='t1'
+        :data="tableData"
+        @filter-change="applyFilter"
+        @selection-change="handleSelectionChange"
+        style="width: 100%">
+        <el-table-column
+          type="selection"
+          v-if='isMDel'
+          :reserve-selection=true
+          :selectable='isSelect'
+          width="55">
+        </el-table-column>
+        <el-table-column
+          prop="code"
+          label="注册编号">
+        </el-table-column>
+        <el-table-column
+          prop="account"
+          label="登录账号">
+        </el-table-column>
+        <!-- <el-table-column
+          prop="name"
+          label="服务方"
+          show-overflow-tooltip>
+        </el-table-column> -->
+        <el-table-column
+          prop="name"
+          label="公司名称">
+        </el-table-column>
+        <el-table-column
+          prop="contacts"
+          label="联系人"
+          width="120">
+        </el-table-column>
+        <el-table-column
+          prop="phone"
+          label="手机号">
+        </el-table-column>
+        <!-- <el-table-column
+          label="标签"
+          min-width="100">
+          <template scope="scope">
+            <el-tooltip class="item" effect="dark" :content='scope.row.tag' placement="bottom" popper-class='maxW'>
+              <div class='ellips'>{{scope.row.tag}}</div>
+            </el-tooltip>
+          </template>
+        </el-table-column> -->
+        <el-table-column
+          prop="position"
+          label="省市">
+        </el-table-column>
+        <el-table-column
+          prop="business_category"
+          label="经营品类">
+        </el-table-column>
+        <el-table-column
+          prop="follow_user"
+          label="跟进人员"
+          width="120"
+          :filter-multiple=false
+          :filters="followPeople" 
+          column-key="follow_user">
+        </el-table-column>
+        <el-table-column
+          prop="follow_status"
+          label="跟进状态"
+          width="120"
+          :filter-multiple=false
+          :filters="[{ text: '跟进状态', value: '' }, { text: '未联系', value: '2' }, { text: '已跟进', value: '1' },{text: '需回访',value: '3'},{text: '无效',value: '2'}]" 
+          column-key="follow_status">
+        </el-table-column>
+        <el-table-column
+          prop="is_auth"
+          label="认证情况"
+          width="120"
+          :filter-multiple=false
+          :filters="[{ text: '全部', value: 'all' }, { text: '已认证', value: '1' }, { text: '未认证', value: '0' }]" 
+          column-key="is_auth">
+        </el-table-column>
+        <el-table-column label="最新跟进时间" prop="follow_time">
+      </el-table-column>
+        <!-- <el-table-column
+          prop="follow"
+          label="跟进记录"
+          min-width="150">
+          <template scope="scope">
+            <el-tooltip class="item" effect="dark" :content='scope.row.follow' placement="bottom" popper-class='maxW'>
+              <div class='ellips'>{{scope.row.follow}}</div>
+            </el-tooltip>
+          </template>
+        </el-table-column> -->
+        <el-table-column label="操作" width="140">
+        <template scope="scope">
+          <span>
+            <router-link 
+            :to="{ name: 'serviceDetail', params:{path: $route.fullPath, id: scope.row.id}}" 
+            class="btn-link edit-btn">
+            查看
+            </router-link>
+          </span>
+          <span>
+            <el-button
+            size="small"
+            type="danger"
+            v-if='service_edit'
+            @click="detele(scope.$index, scope.row)">
+            删除
+            </el-button>
+          </span>
+        </template>
+        </el-table-column>
+    </el-table>
+    <div class="pos-rel p-t-20" v-show="isPage">
+      <div class="block pages m-b-10">
+        <el-pagination 
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange" 
+        :current-page="postData.page"
+        :page-sizes="[15, 30, 50, 100]"
+        :page-size="postData.pagesize" 
+        layout="total, sizes, prev, pager, next, jumper" 
+        :total="total_count">
+        </el-pagination>
+      </div>
+    </div>
+    <div class="fl" v-if='service_edit'>
+      <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+    </div>
+  </div>
+</template>
+<style type="text/css">
+  #serviceList .none{
+    display: none
+  }
+  #serviceList .ellips{
+    width: 150px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  #serviceList .el-button{
+    border: none;
+  }
+  #serviceList .el-icon-more::before{
+    color: #fff;
+  }
+  #serviceList .up-and-down:hover{
+    color: #20A0FF;
+  }
+  .el-dropdown-menu__item:not(.is-disabled):hover{
+    background-color: transparent;
+  }
+  #serviceList .up-and-down:hover{
+    color: #20A0FF;
+  }
+  #serviceList .page-part{
+    margin-top: 10px;
+  }
+  .el-table-filter__list-item:first-child{
+    display: none !important;
+  }
+  #serviceList .service{
+      margin-right: 20px;
+  }
+  #serviceList .service .el-select{
+    /*width: 36%;*/
+  }
+  .bg-bla{
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  .el-loading-mask{
+    /*display:none!important; */
+    background-color: rgba(255,255,255,0)!important;
+  }
+  .selects{
+    width: 180px
+  }
+</style>
+
+<script>
+import resetBtn from '../../common/reset.vue'
+import address from '../../../assets/js/address'
+import http from '../../../assets/js/http'
+import _g from '../../../assets/js/global'
+import failRes from './failRes.vue'
+export default{
+  data() {
+    return {
+      account: null,
+      business_category: null,
+      sellType: [],
+      followPeople: [{ text: '跟进状态', value: '' }],
+      aLink: '', //  下载模版url
+      uploadUrl: '', // 导入数据url
+      postData: {
+        is_auth: 'all',
+        keyword: '',
+        pagesize: 15,
+        page: 1  // 当前页
+      },
+      errorData: [],
+      total_count: 0,  // 总条数
+      tableData: [],
+      isPage: false,
+      service_edit: false,
+      isFirst: true,
+      cityValue: '',
+      proValue: '',
+      proOptions: address.pro,
+      cityOptions: address['city']['广东省'],
+      flag: 2,
+      fullscreenLoading: false,
+      uploadPath: '',
+      isMDel: false,
+      delList: [],
+      is_auth: 'all',
+      status: null,
+      follow_user: null
+    }
+  },
+  watch: {
+    proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+      var self = this
+      self.cityOptions = address['city'][val]
+      self.proValue = val
+      if (!self.isFirst) {
+        self.cityValue = ''
+      } else {
+        self.isFirst = false
+      }
+    },
+    is_auth(newVal, oldVal) {
+      if (newVal != oldVal) {
+        this.postData.is_auth = newVal
+        this.getData()
+      }
+    },
+    $route() {
+      var pagesize = this.postData.pagesize
+      if (this.$route.fullPath == '/data/service/list') {
+        this.postData = {
+          page: 1,
+          is_auth: this.is_auth,
+          pagesize: pagesize,
+          keyword: ''
+        }
+        this.proValue = ''
+        this.cityValue = ''
+      } else {
+        this.postData = {
+          page: this.$route.query.page * 1,
+          is_auth: this.is_auth,
+          pagesize: pagesize,
+          keyword: this.$route.query.keyword
+        }
+        this.proValue = this.$route.query.province
+        this.cityValue = this.$route.query.city
+      }
+      this.getData()
+    }
+  },
+  methods: {
+    handleClearFilter() {
+      this.postData.keyword = ''
+      this.proValue = ''
+      this.cityValue = ''
+      this.account = null
+      this.is_auth = null
+      this.follow_user = null
+      this.status = null
+      this.keyword = null
+      this.business_category = null
+    },
+    isSelect(row, index) {
+      return true
+    },
+    multiDelete() {
+      this.isMDel = true
+    },
+    sureDel() {
+      if (this.delList.length != 0) {
+        this.apiPost('service_user/deletes', { ids: this.delList }).then((res) => {
+          if (res.code == 200) {
+            // 重新获取列表数据
+            this.isMDel = false
+            this.getData()
+            _g.toastMsg(this, 'success', '删除成功')
+          } else {
+            _g.dealError(self, res)
+          }
+        })
+      } else {
+        _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+    },
+    cancelDel() {
+      this.$refs.t1.clearSelection(this.tableData)
+      this.isMDel = false
+    },
+    handleSelectionChange(val) {
+      this.delList = []
+      _(val).forEach((res, key) => {
+        this.delList.push(res.id)
+      })
+    },
+    loadFile(file) {
+      this.$loading({ customClass: 'bg-bla', text: '拼命加载中' })
+    },
+    uploadFail(err, res, file) {
+      // console.log('err = ', _g.j2s(err))
+      // console.log('res = ', _g.j2s(res))
+    },
+    uploadSuccess(res, file, fileList) {
+      // alert(123)
+      this.$loading({ customClass: 'bg-bla', text: '拼命加载中' })
+      if (res.code == 200) {
+        this.apiPost('service_user/import', { path: res.data }).then((Ires) => {
+          this.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+          if (Ires.code == 200) {
+            _g.toastMsg(this, 'success', '导入成功')
+            this.getData()
+            if (Ires.data.length) {
+              this.errorData = Ires.data
+              this.$refs.failRes.open()
+            }
+          } else {
+            _g.dealError(this, Ires)
+          }
+        })
+      } else {
+        this.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+        _g.toastMsg(this, 'error', res.error)
+      }
+    },
+    detele(index, item) {
+      this.$confirm('确定删除？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.apiDelete('service_user/' + item.id).then((res) => {
+          if (res.code == 200) {
+            // 重新获取列表数据
+            this.getData()
+            _g.toastMsg(this, 'success', '删除成功')
+          } else {
+            _g.dealError(this, res)
+          }
+        }).catch(() => {
+          _g.toastMsg(this, 'info', '已取消删除')
+        })
+      })
+    },
+    getMatch() {
+      if (this.$route.fullPath == '/data/service/list') {
+        // console.log(343434)
+        this.postData = {
+          page: 1,
+          keyword: ''
+        }
+        this.proValue = ''
+        this.cityValue = ''
+      } else {
+        // console.log(121212)
+        this.postData = {
+          page: this.$route.page,
+          keyword: this.$route.keyword
+        }
+        this.proValue = this.$route.province
+        this.cityValue = this.$route.city
+      }
+    },
+    search() {  // input框查询
+      var query = {
+        page: this.postData.page,
+        keyword: this.postData.keyword,
+        province: this.proValue,
+        city: this.cityValue,
+        follow_status: this.status,
+        follow_user: this.follow_user,
+        business_category: this.business_category,
+        account: this.account,
+        is_auth: this.is_auth
+      }
+      router.push({ path: '/data/service/list', query: query })
+    },
+    // filterTag(filter) {   // 筛选认证情况
+    // },
+    handleCurrentChange(val) {  // 选择第几页
+      this.postData.page = val
+      this.search()
+    },
+    handleSizeChange(val) {
+      this.postData.pagesize = val
+      if (this.postData.page != 1) {
+        this.postData.page = 1
+        this.search()
+      }
+      this.getData()
+    },
+    applyFilter(filter) { // 根据跟进状态和跟进人员等的条件刷选
+      var self = this
+      // alert(_g.j2s(filter))
+      if (filter.is_auth) {
+        console.log(filter.is_auth)
+        if (filter.is_auth.length == 0) {
+          this.is_auth = 'all'
+        } else {
+          this.is_auth = filter.is_auth[0]
+        }
+      }
+      if (filter.follow_user) {
+        console.log(filter.follow_user)
+        if (filter.follow_user) {
+          if (filter.follow_user.length == 0) {
+            self.follow_user = ''
+          } else if (filter.follow_user.length > 0) {
+            this.follow_user = filter.follow_user[0]
+          }
+        }
+      }
+      if (filter.follow_status) {
+        if (filter.follow_status.length == 0) {
+          self.status = ''
+        } else if (filter.follow_status.length > 0) {
+          self.status = filter.follow_status[0]
+        }
+      }
+      console.log(self.status)
+      self.getData()
+    },
+    getData() {
+      // this.getMatch()
+      // 获取数据
+      this.fullscreenLoading = true
+      this.apiGet('product_types').then(res => {
+        if (res.code == 200) {
+          // console.log(res.data)
+          // for (var i = 0; i < res.data.length; i++) {
+          //   let x = {
+          //     id: res.data[i].id,
+          //     name
+          //   }
+          this.sellType = res.data
+        }
+        console.log(this.sellTypes)
+      })
+      var data = {
+        params: {
+          is_auth: this.is_auth,
+          keyword: this.postData.keyword,
+          page: this.postData.page,
+          pagesize: this.postData.pagesize,
+          province: this.proValue,
+          city: this.cityValue,
+          follow_user: this.follow_user,
+          follow_status: this.status,
+          business_category: this.business_category,
+          account: this.account
+        }
+      }
+      this.apiGet('service_user', data).then((res) => {
+        this.fullscreenLoading = false
+        console.log(res.data)
+        if (res.code == 200) {
+          this.total_count = res.data.total_count
+          if (res.data.list.length != 0) {
+            this.isPage = true
+            this.sortData(res.data.list)
+          } else {
+            this.isPage = false
+            this.tableData = []
+          }
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    sortData(list) {   // 获取到数据后，整理
+      _(list).forEach((res, key) => {
+        if (res.demandServiceContacts) {
+          res.linker = res.demandServiceContacts.name
+          res.phone = res.demandServiceContacts.phone
+        }
+        if (res.followRecord) {
+          res.follow = res.followRecord.content
+        }
+        res.is_auth = '已认证'
+        if (res.auth == '0') {
+          res.is_auth = '未认证'
+        }
+      })
+      this.tableData = [...list]
+      for (var i = 0; i < this.tableData.length; i++) {
+        // console.log(self.tableData[i])
+        this.tableData[i].position = this.tableData[i].province + this.tableData[i].city
+        if (this.tableData[i].position == 0) {
+          this.tableData[i].position = ''
+        }
+      }
+    },
+    download() {
+      var self = this
+      self.apiGet('service_user/template').then((res) => {
+        if (res.code == 200) {
+          self.aLink = imgUrl + res.data
+        } else {
+          _g.dealError(self, res)
+        }
+      })
+    }
+  },
+  created() {
+    if (this.$route.fullPath != '/data/service/list') {
+      this.postData = {
+        page: this.$route.query.page * 1,
+        keyword: this.$route.query.keyword
+      }
+      this.proValue = this.$route.query.province
+      this.cityValue = this.$route.query.city
+      this.is_auth = 'all'
+    }
+    this.uploadUrl = window.HOST + 'Upload/excel'
+    this.getData()
+    if (Lockr.get('authList')) {
+      if (Lockr.get('authList')['service_edit']) {
+        this.service_edit = true
+        this.download()
+      }
+    } else {
+      this.service_edit = true
+      this.download()
+    }
+    this.apiGet('customers/customer_follow_list').then(res => {
+      if (res.code == 200) {
+        // console.log(res.data)
+        // for (var i = 0; i < res.data.length; i++) {
+        //   let x = {
+        //     id: res.data[i].id,
+        //     name
+        //   }
+        for (var i = 0; i < res.data.length; i++) {
+          let x = {
+            value: res.data[i].id,
+            text: res.data[i].name
+          }
+          this.followPeople.push(x)
+        }
+        // this.followPeople = res.data
+        console.log(this.followPeople)
+      }
+    })
+  },
+  components: {
+    'reset-btn': resetBtn,
+    failRes
+  },
+  mixins: [http]
+}
+</script>

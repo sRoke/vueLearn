@@ -1,0 +1,231 @@
+<template>
+  <el-dialog ref="dialog"
+             title="选择分类"
+             class="category-dialog"
+             v-model="dialogVisible">
+  
+    <el-form ref="form"
+             :rules="rules"
+             :model="categoryForm">
+  
+      <el-form-item prop="first"
+                    label="一级类目"
+                    label-width="100px">
+        <el-radio-group v-model="categoryForm.first">
+          <el-radio v-for="item in firstLevels"
+                    :label="item.id">
+            {{ item.name }}
+          </el-radio>
+        </el-radio-group>
+      </el-form-item>
+  
+      <el-form-item prop="second"
+                    label="二级类目"
+                    v-if="showSecond"
+                    label-width="100px">
+        <el-checkbox-group v-model="categoryForm.second">
+          <el-checkbox v-for="item in secondLevels"
+                       :label="item.product_id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+      <el-form-item prop="third"
+                    label="三级类目"
+                    v-if="showThird"
+                    label-width="100px">
+        <el-checkbox-group v-model="categoryForm.third">
+          <el-checkbox v-for="item in thirdLevels"
+                       :label="item.id">
+            {{ item.name }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+  
+    </el-form>
+  
+    <div slot="footer"
+         class="dialog-footer selected-row">
+      <el-button @click="close()">取消</el-button>
+      <el-button type="primary"
+                 @click="commit()">确认</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<style>
+.staff-dialog .el-dialog {
+  min-width: 760px;
+}
+
+.el-radio-group .el-radio {
+  margin: 10px 10px 0 10px;
+}
+
+.el-dialog__wrapper.category-dialog .el-checkbox {
+  margin-left: 10px;
+}
+
+.el-dialog__wrapper.category-dialog .el-form-item__label {
+  margin-right: 0 !important;
+}
+</style>
+
+<script>
+import http from 'assets/js/http'
+import _ from 'lodash'
+export default {
+  props: ['categoryList'],
+  data() {
+    return {
+      dialogVisible: false,
+      firstLevels: [],
+      secondLevels: [],
+      thirdLevels: [],
+      categoryForm: {
+        first: null,
+        second: [],
+        third: []
+      },
+      results: [],
+      rules: {
+        first: [
+          { required: true, message: '请选择一个一级类目' }
+        ],
+        second: [
+          { type: 'array', required: false }
+        ],
+        third: [
+          { type: 'array', required: false }
+        ]
+      }
+    }
+  },
+  watch: {
+    'categoryForm.first'(val) {
+      this.resetFirst(val)
+      this.fetchProductByType()
+    },
+    'categoryForm.second'(val) {
+      this.results[1] = val
+      this.loadThirdData(val)
+    },
+    'categoryForm.third'(val) {
+      this.results[2] = val
+    }
+  },
+  methods: {
+    fetchProductTypes() { // 请求一级类目数据
+      this.apiGet('product_types').then(res => {
+        if (res.code === 200) {
+          this.firstLevels = res.data
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    fetchProductByType() { // 请求一级类目下的所有二三级类目数据
+      let type = this.categoryForm.first
+      this.apiGet(`products?type=${type}`).then(res => {
+        if (res.code === 200) {
+          this.secondLevels = res.data
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    loadThirdData(secondList) { // 加载三级类型数据
+      this.thirdLevels = []
+      const oldList = [...this.categoryForm.third]
+      this.categoryForm.third = []
+      _(secondList).forEach((second) => {
+        let data = this.secondLevels
+        let secondType = _.find(data, (o) => o.product_id === second)
+        const oldWordArr = [...secondType.word_arr]
+        let list = this.thirdLevels.concat(secondType.word_arr)
+        this.thirdLevels = list
+        _(oldList).forEach((item, index) => {
+          _(oldWordArr).forEach((reItem) => {
+            reItem.id == item ? this.categoryForm.third.push(item) : null
+          })
+        })
+      })
+    },
+    resetFirst(val) { // 重新选择一级类目
+      this.categoryForm.second = []
+      this.categoryForm.third = []
+      let first = [val]
+      this.results = [first]
+    },
+    resetSelect() { // 重置所有已选择数据
+      this.categoryForm.first = null
+      this.categoryForm.second = []
+      this.categoryForm.third = []
+    },
+    open() { // 打开模态框
+      this.$refs.dialog.open()
+    },
+    close() { // 关闭模态框
+      this.$refs.dialog.close()
+    },
+    commit() { // 确定
+      let first = _.find(this.firstLevels, { id: this.categoryForm.first })
+      let second = [{ product_id: [], name: '', children: [] }]
+      let third = { id: [], name: '' }
+      _(this.categoryForm.second).forEach((product_id, index) => {
+        let category = _.find(this.secondLevels, { product_id })
+        let symbol = index !== this.categoryForm.second.length - 1 ? '、' : ''
+        second[0].product_id.push(category.product_id)
+        second[0].name += `${category.name}` + symbol
+      })
+      _(this.categoryForm.third).forEach((id, index) => {
+        let category = _.find(this.thirdLevels, { id })
+        let symbol = index !== this.categoryForm.third.length - 1 ? '、' : ''
+        third.id.push(category.id)
+        third.name += `${category.name}` + symbol
+      })
+      let arr = [{
+        id: first.id,
+        name: first.name
+      }]
+      if (this.categoryForm.third.length) {
+        second[0].children.push(third)
+      }
+      if (this.categoryForm.second.length) {
+        arr[0].children = second
+      }
+      this.$parent.setCategory(arr)
+      this.close()
+    },
+    getCurrent() { // 获取当前的结果
+      return this.results
+    }
+  },
+  computed: {
+    showSecond() { // 是否显示二级类目
+      return this.categoryForm.first || this.categoryForm.second.length > 0
+    },
+    showThird() { // 是否显示三级类目
+      return this.categoryForm.second.length > 0 || this.categoryForm.third.length > 0
+    }
+  },
+  created() {
+    this.fetchProductTypes()
+  },
+  mounted() {
+    let firstCategory = this.categoryList[0]
+    let secondCategory = firstCategory.children[0]
+    let thirdCategory = secondCategory.children[0]
+    this.categoryForm.first = firstCategory.id
+    this.$nextTick(() => {
+      this.categoryForm.second = secondCategory.product_id
+      this.categoryForm.third = thirdCategory.id
+    })
+  },
+  components: {
+
+  },
+  mixins: [http]
+}
+</script>

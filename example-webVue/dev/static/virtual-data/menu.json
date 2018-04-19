@@ -1,0 +1,52 @@
+{
+  "result":[
+    {
+      "name":"工作台",
+      "childMenu":[],
+      "path": "/work_index"
+    },
+    {
+      "name":"系统",
+      "childMenu":[
+        {
+          "title":"系统配置",
+          "items": [
+            {
+              "path": "/system/menu/index",
+              "name": "菜单配置"
+            },
+            {
+              "path": "/system/config/add",
+              "name": "参数配置"
+            }
+          ]
+        },
+        {
+          "title":"权限配置",
+          "items": [
+            {
+              "path": "/ruleConfig/rule/list",
+              "name": "权限规则配置"
+            },
+            {
+              "path": "/ruleConfig/user/list",
+              "name": "用户列表"
+            },
+            {
+              "path": "/ruleConfig/userGroup/list",
+              "name": "用户组配置"
+            },
+            {
+              "path": "/ruleConfig/organize/list",
+              "name": "组织架构"
+            },
+            {
+              "path": "/ruleConfig/log/list",
+              "name": "登录日志"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

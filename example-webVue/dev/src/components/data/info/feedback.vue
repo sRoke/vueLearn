@@ -1,0 +1,321 @@
+<template> 
+  <div id='feedback'>
+    <div class="m-b-10">
+     <el-row :gutter="20" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+             <a href="#/data/info/article"><span class="older">文件管理</span></a> 
+              &nbsp;  
+               <a class="now" href="#/data/info/feedback"><span>用户反馈</span>
+               </a>
+              <div class="fr">         
+              <el-select v-model="status"  @change="select()">
+                <el-option
+                  v-for="item in options"
+                  :label="item.label"
+                  :value="item.statement">
+                </el-option>
+              </el-select>
+                <el-input placeholder="请输入联系人、反馈标题搜索" v-model="keyword" class="w-250">
+                  <el-button slot="append" icon="search" @click="select()"></el-button>
+                </el-input> 
+                <reset-btn class="fr m-l-10"
+                 :reset="handleClearFilter"></reset-btn>
+              </div>
+      </el-row>
+    </div>
+    <el-table
+      ref="t1"
+      :data="tableData"
+      style="width: 100%"
+      @selection-change="handleSelectionChange">
+      <el-table-column
+        type="selection"
+        v-if='isMDel'
+        :reserve-selection=true
+        :selectable='isSelect'
+        width="55">
+      </el-table-column>
+      <el-table-column
+        label="编号"
+        >
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.num }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="联系人"
+        >
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.linker }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="联系电话"
+        >
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.phone }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="联系邮件"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.email }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="反馈标题"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span class="span-back now ifclick" @click="feedbackTitle(scope.row.id)">{{ scope.row.title }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="内容"
+        min-width="100"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.content }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="备注"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span class="span-back ellips">{{ scope.row.remark }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="状态"
+        >
+        <template scope="scope">
+          <span class="span-back ellips">{{ scope.row.statement }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="生成时间"
+        min-width="100"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span class="span-back">{{ scope.row.create_time }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作">
+        <template scope="scope">
+          <el-button
+            size="small"
+            type="danger"
+            @click="handleDelete(scope.row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+      <div class="pos-rel p-t-20" v-show="isPage">
+        <div class="block pages m-b-10">
+          <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          layout="total, sizes, prev, pager, next, jumper"
+          :page-sizes="[15, 30, 50, 100]"
+          :page-size="pageSize"
+          :current-page="currentPage"
+          :total="dataCount">
+          </el-pagination>
+        </div>
+      </div>
+      <feedbackTitle ref="feedbackTitle" :info="tableData"></feedbackTitle>
+  <div class="fl">
+    <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+  </div>
+  </div>
+</template>
+<style>
+  #feedback .ellips{
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .span-back{
+    margin-left: 0
+  }
+  .ifclick{
+    cursor:pointer
+  }
+</style>
+<script>
+  import resetBtn from '../../common/reset.vue'
+  import http from '../../../assets/js/http'
+  import feedbackTitle from './feedback_title.vue'
+  export default{
+    watch: {
+      '$route'(to, from) {
+        var self = this
+        self.init()
+      }
+    },
+    data() {
+      return {
+        fullscreenLoading: false,
+        isMDel: false,
+        delList: [],
+        pageSize: 15,
+        keyword: '',
+        status: '',
+        tableData: [],
+        options: [{
+          statement: '',
+          label: '全部状态'
+        }, {
+          statement: '1',
+          label: '已查阅'
+        }, {
+          statement: '2',
+          label: '已处理'
+        }, {
+          statement: '3',
+          label: '已取消'
+        }],
+        currentPage: 1,
+        dataCount: null,
+        isPage: false
+      }
+    },
+    methods: {
+      handleClearFilter() {
+        this.status = ''
+        this.keyword = ''
+        this.select()
+      },
+      select() {
+        var self = this
+        router.push({ path: '/data/info/feedback', query: { page: self.currentPage, pagesize: self.pageSize, keyword: self.keyword, status: self.status }})
+      },
+      init() {
+        this.fullscreenLoading = true
+        var self = this
+        if (self.$route.fullPath == '/data/info/feedback') {
+          self.currentPage = 1
+          self.pageSize = 15
+          self.keyword = ''
+          self.status = ''
+        } else {
+          self.currentPage = self.$route.query.page * 1
+          self.pageSize = self.$route.query.pagesize * 1
+          self.keyword = self.$route.query.keyword
+          self.status = self.$route.query.status
+        }
+        self.getData()
+      },
+      getData() {
+        this.apiGet('feedback?page=' + this.currentPage + '&pagesize=' + this.pageSize + '&keyword=' + encodeURI(this.keyword) + '&status=' + this.status).then((res) => {
+          this.fullscreenLoading = false
+          console.log(res.data)
+          if (res.code == 200) {
+            if (res.data.list.length > 0) {
+              this.isPage = true
+            }
+            let data = {}
+            this.tableData = _(res.data.list).forEach((val, key) => {
+              if (val.statement == 1) {
+                console.log('就在这里')
+                val.statement = '已查阅'
+              } else if (val.statement == 2) {
+                val.statement = '已处理'
+              } else if (val.statement == 3) {
+                val.statement = '已取消'
+              }
+            })
+            this.dataCount = res.data.total_count
+            console.log(this.tableData)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      handleDelete(item) {
+        this.$confirm('确认删除?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('feedback/', item.id).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          })
+        })
+      },
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.select()
+      },
+      feedbackTitle(id) {
+        console.log(id)
+        this.tableData = this.tableData
+        this.$refs.feedbackTitle.open(id)
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        this.currentPage = 1
+        this.select()
+        // console.log(`每页 ${val} 条`)
+      },
+      isSelect(row, index) {
+        return true
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      sureDel() {
+        console.log(JSON.stringify(this.delList))
+        let asd = {
+          delList: this.delList
+          // delList: this.delList
+        }
+        // asd.push(asd)
+        console.log(asd)
+        if (this.delList.length == 0) {
+          _g.toastMsg(this, 'warning', '请选择删除项')
+        } else {
+          console.log(asd)
+          this.apiPost('feedback/destroy', asd).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+          this.isMDel = false
+        }
+        // console.log((this.delList))
+      },
+      cancelDel() {
+        this.$refs.t1.clearSelection(this.tableData)
+        this.isMDel = false
+      },
+      handleSelectionChange(val) {
+        this.delList = []
+        _(val).forEach((res, key) => {
+          this.delList.push(res.id)
+        })
+      }
+    },
+    created() {
+      this.init()
+    },
+    components: {
+      'reset-btn': resetBtn,
+      feedbackTitle
+    },
+    mixins: [http]
+  }
+</script>

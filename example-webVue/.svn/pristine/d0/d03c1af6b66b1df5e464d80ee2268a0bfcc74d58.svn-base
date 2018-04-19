@@ -1,0 +1,132 @@
+<template>
+  <el-dialog ref="dialog" title="上传">
+    <div class="ovf-auto" id="fileUp">
+    <!--   <div class="clearn" v-show="name != ''">
+        <div class="fl">{{name}}</div>
+        <el-button size="small" type="text" class="fr" @click="del()">删除</el-button>
+      </div> -->
+      <el-upload
+        :action="uploadUrl"
+        :on-success="uploadSuccess"
+        :on-error="uploadFail"
+        :on-remove="handleRemove"
+        :multiple="false"
+        :file-list="fileList"
+        :show-upload-list="false">
+        <el-button v-if='url == ""' size="small" type="primary">点击上传</el-button>
+      </el-upload>
+      <div class="m-t-20">
+        <el-button class="fr m-r-20" @click="close()">取消</el-button>
+        <el-button type="primary" class="fr m-r-30" @click="upImg()">确定</el-button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+<style>
+  #fileUp .clearn {
+    width: 100%;
+    height: 35px;
+  }
+  #fileUp .el-dragger__cover__interact .btn:not(:first-child) {
+    display: none !important;
+  }
+  .m-r-auto {
+    margin: 0 auto;
+  }
+  .box-shadow-none {
+    box-shadow: 0 1px 3px rgba(0,0,0,0);
+  }
+   .big-img {
+    max-width: 700px;
+    max-height: 540px;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['status', 'urlId'],
+    data() {
+      return {
+        uploadUrl: '',
+        name: '',
+        fileList: [],
+        url: '',
+        id: null
+      }
+    },
+    methods: {
+      open() {
+        this.fileList = []
+        this.name = ''
+        this.url = ''
+        this.$refs.dialog.open()
+      },
+      close() {
+        this.$refs.dialog.close()
+      },
+      handleRemove(file, fileList) {
+        this.name = ''
+        this.url = ''
+      },
+      uploadSuccess(res, file, fileList) {
+        if (res.code == 200) {
+          this.name = file.name
+          this.url = res.data
+        } else {
+          this.fileList = []
+          _g.toastMsg(this, 'warning', res.error + ',请上传图片,pdf,rar等格式文件')
+        }
+      },
+      uploadFail(err, res, file) {
+        console.log('err = ', _g.j2s(err))
+        console.log('res = ', _g.j2s(res))
+      },
+      upImg() {
+        if (this.url == '') {
+          _g.toastMsg(this, 'warning', '请上传文件')
+          return
+        }
+        if (this.status == 0) {
+          let upData = {
+            file_name: this.name,
+            file_url: this.url
+          }
+          this.apiPost('requires/' + this.urlId + '/files', upData).then((res) => {
+            console.log(res)
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '上传成功')
+              setTimeout(() => {
+                location.reload()
+              }, 1000)
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        } else {
+          let upData = {
+            action_type: 'updateStatus',
+            file_name: this.name,
+            file_url: this.url,
+            status: this.status
+          }
+          this.apiPut('orders/' + this.id, '', upData).then((res) => {
+            console.log(res)
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '上传成功')
+              setTimeout(() => {
+                location.reload()
+              }, 1000)
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }
+      }
+    },
+    created() {
+      this.uploadUrl = window.HOST + 'Upload/data'
+      this.id = this.$route.params.id
+    },
+    mixins: [http]
+  }
+</script>

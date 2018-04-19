@@ -1,0 +1,280 @@
+<template>
+  <el-row class="panel m-w-1280">
+    <el-col :span="24" class="panel-top">
+      <el-col :span="4">
+        <img :src="img" class="logo">
+      </el-col>
+      <el-col :span="16" class="ofv-hd">
+      <div class="fl p-l-20 p-r-20 top-menu pos-rel" :class="{'top-active': menu.selected, 'red-point': menu.title=='业务管理' && serviceNotice}" v-for="menu in topMenu" @click="switchTopMenu(menu)">{{menu.title}}</div>
+      </el-col>
+      <el-col :span="4" class="pos-rel">
+        <el-dropdown @command="handleMenu" class="user-menu">
+          <span class="el-dropdown-link c-gra">
+            {{username}}&nbsp;&nbsp;<i class="fa fa-user" aria-hidden="true"></i>
+          </span>
+
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="changePwd">修改密码</el-dropdown-item>
+            <el-dropdown-item command="logout">退出</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </el-col>
+    </el-col>
+    <el-col :span="24" class="panel-center">
+      <aside class="w-230 ovf-hd" v-show="!showLeftMenu">
+        <leftMenu :menuData="menuData" :menu="menu" ref="leftMenu"></leftMenu>
+      </aside>
+      <section class="panel-c-c" :class="{'hide-leftMenu': hasChildMenu}">
+        <div class="grid-content bg-purple-light">
+          <el-col :span="24">
+          <!--<transition name="fade" mode="out-in" appear>-->
+            <router-view></router-view>
+          <!--</transition>-->
+          </el-col>
+        </div>
+      </section>
+    </el-col>
+    <changePwd ref="changePwd"></changePwd>
+  </el-row>
+</template>
+<style>
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity .5s
+  }
+
+  .fade-enter,
+  .fade-leave-active {
+    opacity: 0
+  }
+
+  .panel {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    width: 100%;
+  }
+
+  .panel-top {
+    height: 60px;
+    line-height: 60px;
+    background: #1F2D3D;
+    color: #c0ccda;
+  }
+
+  .panel-center {
+    background: #324057;
+    position: absolute;
+    top: 60px;
+    bottom: 0px;
+    overflow: hidden;
+  }
+
+  .panel-c-c {
+    background: #f1f2f7;
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    left: 230px;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .logout {
+    background: url(../assets/images/logout_36.png);
+    background-size: contain;
+    width: 20px;
+    height: 20px;
+    float: left;
+  }
+
+  .logo {
+    width: 150px;
+    float: left;
+    margin: 10px 10px 10px 18px;
+  }
+
+  .tip-logout {
+    float: right;
+    margin-right: 20px;
+    padding-top: 5px;
+    cursor: pointer;
+  }
+
+  .admin {
+    color: #c0ccda;
+    text-align: center;
+  }
+  .hide-leftMenu {
+    left: 0px;
+  }
+
+  .red-point:after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    right: 10px;
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    background-color: red;
+    border-radius: 5px;
+  }
+</style>
+<script>
+  import leftMenu from './leftMenu.vue'
+  import changePwd from './account/changePwd.vue'
+  import http from '../assets/js/http'
+
+  export default {
+    data() {
+      return {
+        username: '',
+        topMenu: [],
+        childMenu: [],
+        menuData: [],
+        hasChildMenu: false,
+        menu: null,
+        module: null,
+        img: ''
+      }
+    },
+    methods: {
+      // 退出登录
+      logout() {
+        this.$confirm('确认退出吗?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消'
+        }).then(() => {
+          let data = {
+            authkey: Lockr.get('authKey'),
+            sessionId: Lockr.get('sessionId')
+          }
+          this.apiPost('base/logout', data).then((res) => {
+            if (res.code == 200) {
+              Lockr.rm('menus')
+              Lockr.rm('authKey')
+              Lockr.rm('rememberKey')
+              Lockr.rm('authList')
+              Lockr.rm('userInfo')
+              Lockr.rm('sessionId')
+              Lockr.rm('logo')
+              Cookies.remove('rememberPwd')
+              _g.toastMsg(this, 'success', '退出成功')
+              setTimeout(() => {
+                router.replace('/')
+              }, 1500)
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+
+        })
+      },
+      switchTopMenu(item) {
+        if (!item.child) {
+          location.hash = item.url
+        } else {
+          // console.log(JSON.stringify(item))
+          location.hash = item.child[0].child[0].url
+        }
+      },
+      handleMenu(val) {
+        switch (val) {
+          case 'logout':
+            this.logout()
+            break
+          case 'changePwd':
+            this.changePwd()
+            break
+        }
+      },
+      changePwd() {
+        this.$refs.changePwd.open()
+      },
+      getUsername() {
+        this.username = Lockr.get('userInfo').u_username
+      },
+      getNotice() {
+        this.apiGet('notices').then((ret) => {
+          if (ret.code == 200) {
+            store.dispatch('setDemandNum', ret.data.require_count)
+            store.dispatch('setOrderNum', ret.data.order_count)
+            store.dispatch('setUnrelateDemand', ret.data.undemand_count)
+            store.dispatch('setUnrelateService', ret.data.unservice_count)
+            if (ret.data.require_count == 0 && ret.data.order_count == 0) {
+              store.dispatch('setServiceNotice', false)
+            } else {
+              store.dispatch('setServiceNotice', true)
+            }
+          }
+        })
+      }
+    },
+    created() {
+      this.getNotice()
+      this.img = window.imgUrl + Lockr.get('logo')
+      let authKey = Lockr.get('authKey')
+      let sessionId = Lockr.get('sessionId')
+//      if (!authKey || !sessionId) {
+//        _g.toastMsg(this, 'warning', '您尚未登录')
+//        setTimeout(() => {
+//          router.replace('/')
+//        }, 1500)
+//        return
+//      }
+      this.getUsername()
+      let menus = Lockr.get('menus')
+      this.menu = this.$route.meta.menu
+      this.module = this.$route.meta.module
+      this.topMenu = menus
+      // console.log('this:' + JSON.stringify(menus))
+      _(menus).forEach((res) => {
+        if (res.module == this.module) {
+          this.menuData = res.child
+          res.selected = true
+        } else {
+          res.selected = false
+        }
+      })
+    },
+    computed: {
+      serviceNotice() {
+        return store.state.serviceNotice
+      },
+      routerShow() {
+        return store.state.routerShow
+      },
+      showLeftMenu() {
+        this.hasChildMenu = store.state.showLeftMenu
+        return store.state.showLeftMenu
+      }
+    },
+    components: {
+      leftMenu,
+      changePwd
+    },
+    watch: {
+      '$route' (to, from) {             // 监听路由改变
+        // if (to.name === "deDetail" && from.name === 'publicClientUnRelativeDemand') return
+        // if (to.name === "deDetail" && from.name === 'publicClientUnRelativeService') return
+        // if (to.name === from.name) return
+        this.getNotice()
+        _(this.topMenu).forEach((res) => {
+          if (res.module == to.meta.module) {
+            res.selected = true
+            if (!to.meta.hideLeft) {
+              this.menu = to.meta.menu
+              this.menuData = res.child
+            }
+          } else {
+            res.selected = false
+          }
+        })
+      }
+    },
+    mixins: [http]
+  }
+</script>

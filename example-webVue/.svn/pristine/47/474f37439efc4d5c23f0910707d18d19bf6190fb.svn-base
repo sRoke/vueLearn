@@ -1,0 +1,145 @@
+<template>
+  <el-dialog ref="dialog" class="videos1" :close-on-click-modal="false">
+      <div class="play-frame">
+         <div class="btn-play" @click="play" v-show="showCover"></div>
+         <embed id="player" class="item-video" :src="form.video_url" quality='high' width='1000px' height='700' align='middle' type='application/x-shockwave-flash' allowNetworking="internal" flashvars="isAutoPlay=true&auto=1&autoPlay=true" allowFullScreen="true" invokeurls="false" wmode="transparent" autoStart="true" v-if="!showCover"></embed>
+         <div class="video-cover" v-show="showCover">
+           <img :src="imgUrl + form.img_url" style="width:100%;height:100%">
+         </div>
+       </div>
+      <div class="btn-close" @click="close">×</div>
+  </el-dialog>
+</template>
+<style>
+  .videos1 .el-dialog--small{
+    width: 1000px !important;
+    height: 700px !important;
+  }
+  .play-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1000px !important;
+    height: 700px !important;
+    z-index: 999;
+    margin-top: -350px;
+    margin-left: -500px;
+    background-color: #fff;
+  }
+  .item-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .btn-close {
+    position: absolute;
+    right: -10%;
+    top: -10%;
+    float: right;
+    width: 36px;
+    height: 36px;
+    color: #fff;
+    font-size: 36px;
+    cursor: pointer;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+  }
+  .btn-play {
+    position: absolute;
+    width: 164px;
+    height: 164px;
+    top: 50%;
+    left: 50%;
+    margin-top: -82px;
+    margin-left: -82px;
+    background-image: url(../../../assets/images/spirit-min.png);
+    background-repeat: no-repeat;
+    background-position: -196px -110px;
+    background-size: 2000px 2000px;
+    cursor: pointer;
+    z-index: 12;
+  }
+  .video-cover {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    z-index: 11;
+  }
+  .video-cover:before {
+    display: inline-block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .2);
+    z-index: 12;
+    content: ' ';
+  }
+  .video-cover img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    -o-transform: translate(-50%, -50%);
+    -moz-transform: translate(-50%, -50%);
+    -webkit-transform: translate(-50%, -50%);
+  }
+  .video-in-enter {
+    opacity: 0;
+    transition: all .3s;
+  }
+  .video-in-enter-active {
+    opacity: 1;
+    transition: all .3s;
+  }
+  .video-in-leave-active {
+    opacity: 0;
+    transition: all .3s;
+  }
+  .video-in-leave {
+    opacity: 1;
+    transition: all .3s;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['info'],
+    data() {
+      return {
+        showAlbum: [],
+        showCover: true,
+        imgUrl: '',
+        form: []
+      }
+    },
+    mounted() {
+      this.imgUrl = imgUrl
+    },
+    methods: {
+      open(id) {
+        this.form.id = id
+        this.$refs.dialog.open(id)
+        this.apiGet('videos/' + this.form.id).then((res) => {
+          console.log(res.data)
+          this.form = res.data
+        })
+      },
+      play() {
+        this.showCover = false
+      },
+      close() {
+        this.showCover = true
+        store.dispatch('showVideo', false)
+        this.$refs.dialog.close()
+      }
+    },
+    computed: {
+      show() {
+        return store.state.showVideo
+      }
+    },
+    mixins: [http]
+  }
+</script>

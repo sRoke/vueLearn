@@ -1,0 +1,118 @@
+<template>
+  <div id='customerDetail'>
+    <!-- <div class='num record-num'>{{ match }}</div> -->
+    <el-tabs v-model="activeName" @tab-click="handleClick">
+      <el-tab-pane label="需求方信息" name="first">
+        <info ref='info' :id='infoId' v-on:demandRecord="onChildChange" ></info>
+      </el-tab-pane>
+      <el-tab-pane label="需求记录" :id="match" name="second" class='marrl-5'>
+        <record ref='record'></record>
+      </el-tab-pane>
+      <el-tab-pane label="跟进情况" :id="match" name="third" class='marrl-5'>
+        <updateDetail ref='updateDetail'></updateDetail>
+      </el-tab-pane>
+    </el-tabs>
+    <el-row class="fr m-t-30" v-if="!isEdit">
+        <el-col>
+          <el-button  @click="goback()">取消</el-button>
+          <el-button type="primary" @click="edit()" :loading="isLoading">保存</el-button>
+        </el-col>
+      </el-row>
+  </div>
+</template>
+
+<style type="text/css">
+  #customerDetail .el-tabs__item{
+    border: 1px solid #d3dce6;
+    border-bottom: 0px;
+    border-radius: 5px;
+    margin-right: 8px;
+  }
+  #customerDetail .el-tabs__active-bar{
+    display: none;
+  }
+  #customerDetail .num{
+    display: inline;
+    position: absolute;
+    height: 25px;
+    z-index: 99;
+    line-height: 25px;
+    width: 25px;
+    font-size: 12px;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0px 0px 5px #888888;
+    text-align: center;
+    color: #fff;
+    background: #20a0ff;
+  }
+  #customerDetail .record-num{
+    top: 12px;
+    left: 205px;
+  }
+</style>
+
+<script>
+  import info from './info.vue'
+  import record from './record.vue'
+  import updateDetail from './updateDetail.vue'
+  export default {
+    data() {
+      return {
+        isLoading: false,
+        isEdit: true,
+        activeName: 'first',
+        infoId: 0,
+        match: '',
+        show: Lockr.get('authList')
+      }
+    },
+    watch: {
+      '$route' (to, from) {             // 监听路由改变
+        this.init()
+      }
+    },
+    methods: {
+      goback() {
+        router.go(-1)
+      },
+      edit() {
+        this.isLoading = true
+        this.$refs.info.edit(this.loadingDone)
+      },
+      loadingDone() {
+        this.isLoading = false
+      },
+      init() {
+        if (this.$route.query.index) {
+          this.activeName = this.$route.query.index
+        }
+      },
+      handleClick(tab, event) {
+        switch (tab.index) {
+          case 0: this.activeName = 'first'
+            break
+          case 1: this.activeName = 'second'
+            break
+        }
+        router.push({ name: 'deDetail', params: { id: this.infoId }, query: { index: this.activeName }})
+      },
+      onChildChange(res) {
+        this.match = res
+      }
+    },
+    created() {
+      this.infoId = this.$route.params.id
+      console.log(this.infoId)
+      if (this.show == null || this.show['service_edit']) {
+        this.isEdit = false
+      }
+      this.init()
+    },
+    components: {
+      info,
+      record,
+      updateDetail
+    }
+  }
+</script>

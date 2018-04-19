@@ -1,0 +1,450 @@
+<template>
+  <div class="m-t-10 fz-14" style="width: 100%">
+    <div class="tx-c fz-18" style="width: 100%; font-weight: bold;">{{title}}</div>
+    <div class="m-t-20 ">
+      <el-row :gutter="20">
+        <el-col :span="11">
+          <div class="tx-c"><span class="labelTitle">甲方：</span>{{contract.party_a_info.company}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">注册地址：</span>{{contract.party_a_info.address}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">电话：</span>{{contract.party_a_info.phone}}</div>
+        </el-col>
+        <el-col :span="2">
+          <div class="con-line"></div>
+        </el-col>
+        <el-col :span="11">
+          <div class="tx-c"><span class="labelTitle">乙方：</span>{{contract.party_b_info.company}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">注册地址：</span>{{contract.party_b_info.address}}</div>
+          <div class="m-t-10 tx-c"><span class="labelTitle">电话：</span>{{contract.party_b_info.phone}}</div>
+        </el-col>
+      </el-row>
+    </div>
+    <div class="m-t-30 con-title">一、设计费用</div>
+    <div v-if="(isCom == 2) || (model == 1)">
+      <div class="m-t-20 con-text">1、项目总金额￥{{(contract.balance_amount + contract.pre_pay).toFixed(2)}}元</div>
+      <div class="m-t-20 con-text">2、预付款￥{{(contract.pre_pay + 0).toFixed(2)}}元+尾款￥{{(contract.balance_amount + 0).toFixed(2)}}元</div>
+    </div>
+    <div v-if="(isCom == 1) && (model == 2)">
+      <div class="m-t-20 con-text">1、项目总金额￥{{(contract.balance_amount + contract.pre_pay).toFixed(2)}}元+销量提成</div>
+      <div class="m-t-20 con-text service-table" style="width: 100%">
+        <el-row :gutter="20">
+        <el-col :span="4">
+          <div>2、销量提成方案</div>
+        </el-col>
+        <el-col :span="9">
+          <el-table
+            :data="tableData"
+            border
+            style="width: 100%" class="tx-c">
+            <el-table-column
+              label="销量范围（台）">
+              <template scope="scope">
+                {{scope.row.start_count}}——{{scope.row.end_count}}
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="提成金额">
+              <template scope="scope" v-show="scope.row.start_count != null">
+                {{scope.row.amount}}/台
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-col>
+        </el-row>
+      </div>
+    </div>
+    <div v-if="(isCom == 2) || (model == 1)">
+      <div class="m-t-30 con-title">二、项目佣金</div>
+      <div class="m-t-20 con-text">
+        1、针对此设计项目，甲方向乙方收取项目佣金，具体金额为：上述项目启动金及销售提成费的10%
+      </div>
+    </div>
+    <div v-if="(isCom == 1) && (model == 2)">
+      <div class="m-t-30 con-title">二、项目佣金及计数器说明</div>
+      <div class="m-t-20 con-text">
+        1、针对此设计项目，甲方向乙方收取项目佣金，具体金额为：上述项目启动金及销售提成费的10%
+      </div>
+      <div class="m-t-20 con-text">
+        2、甲方将确保乙方在销售提成模式中的利益，并将严格监控本协议项下设计项目开发的产品销售数量，并确保准确性。用于监控产品数量的计数器成本费用由乙方承担。计数器单价：人民币1元/个
+      </div>
+    </div>
+    <div class="m-t-30 con-title">三、结算方式</div>
+    <div class="m-t-20 con-box p-t-10 p-b-10 p-l-10 p-r-10">
+      <div class="con-text m-l-5 m-r-5">
+        1、自甲方客户完成第一阶段设计方案验收并回复满意后，乙方应开具正规增值税专用发票给甲方。甲方收到乙方增值税专用发票后的3个工作日内，甲方扣除项目佣金后向乙方支付项目启动金。
+      </div>
+      <div class="con-text m-t-10 m-l-5 m-r-5" v-show="(isCom == 2) || (model == 1)">
+        2、尾款：自甲方客户完成此项目约定的设计成果验收后，乙方应开具正规增值税专用发票给甲方。甲方收到乙方增值税专用发票后的3个工作日内，扣除项目佣金后向乙方支付尾款。至此，甲乙双方交易完成。
+      </div>
+      <div class="con-text m-t-10 m-l-5 m-r-5" v-show="(isCom == 1) && (model == 2)">
+        2、自本协议项下约定设计产品开发完成，并实现首笔产品销售订单之日起开始计算销售提成，以每季度为一个结算周期。甲方在每季度开始的第一个月15号之前按照上述约定的“销售提成计提方案”，将上一季度产品销售提成费用对账单以书面形式发给乙方确认。在乙方书面确认并提供增值税专用发票后的3个工作日内，甲方扣除项目佣金后将销售提成费用汇至乙方指定账户。
+      </div>
+      <div v-show="(isCom == 1) && (model == 2)">
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          3、甲方可选择以下任一方式完结此协议约定项目的销量分成合作制：
+        </div>
+        <div class="con-text m-l-5 m-r-5">
+          3.1、自甲方向乙方支付产品销售提成费达到<el-input :disabled="true" v-model="contract.reach_month" class="w-60 litle-input"></el-input>个月（以甲方首次向乙方支付产品提成费之日起算）后，甲乙双方本次交易完成。
+        </div>
+        <div class="con-text m-l-5 m-r-5">
+          3.2、甲方一次性向乙方支付相关费用提前买断（结束销量分成合作制），具体金额如下：自甲乙双方签订本协议之日起，18 个月内买断的费用为人民币<el-input :disabled="true" v-model="contract.buyout_1" class="w-60 litle-input"></el-input>万，自第19个月至第30个月内买断的费用为人民币<el-input :disabled="true" v-model="contract.buyout_2" class="w-60 litle-input"></el-input>万,自第31个月至第42个月内买断的费用为人民币<el-input :disabled="true" v-model="contract.buyout_3" class="w-60 litle-input"></el-input>万。自甲方向乙方提出买断要求并按照上述费用约定支付相关买断费用之日起， 乙方不再向甲方收取此协议约定项目的销售提成费用。至此，甲乙双方本次交易完成。
+        </div>
+        <div class="con-text m-l-5 m-r-5">
+          3.3、关于上述买断费用，乙方须开具增值税专用发票给甲方。
+        </div>
+      </div>
+    </div>
+    <el-form ref="form" :model="contract" label-width="0px">
+      <div class="m-t-30 con-title">四、产品评估（选填）</div>
+      <div class="m-t-20 con-box p-t-10 p-b-10" style="width: 100%;">
+        <div class="con-text m-l-5 m-r-5">
+          1、预计产品成本：￥<el-input :disabled="true" v-model="contract.cost.start" class="w-60 litle-input"></el-input>元至<el-input :disabled="true" v-model="contract.cost.end" class="w-60 litle-input"></el-input>元；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          2、预计售价：￥<el-input :disabled="true" v-model="contract.price.start" class="w-60 litle-input"></el-input>元至<el-input :disabled="true" v-model="contract.price.end" class="w-60 litle-input"></el-input>元；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          3、预计上市时间：<el-input :disabled="true" v-model="contract.market_time" class="w-100 litle-input"></el-input>；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          4、设计结束时间：<el-input :disabled="true" v-model="contract.end_time" class="w-100 litle-input"></el-input>；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          5、预计销量：第一年：<el-input :disabled="true" v-model="contract.sales.first" class="w-60 litle-input"></el-input>万台（单位）；第二年：<el-input :disabled="true" v-model="contract.sales.second" class="w-60 litle-input"></el-input>万台（单位）；
+        </div>
+        <div class="con-text m-t-10 m-l-5 m-r-5">
+          第三年：<el-input :disabled="true" v-model="contract.sales.third" class="w-60 litle-input"></el-input>万台（单位）；三年后：<el-input :disabled="true" v-model="contract.sales.after_third" class="w-60 litle-input"></el-input>万台（单位）；
+        </div>
+      </div>
+      <div class="m-t-30 con-title">五、产品信息</div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>设计方案</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design" class="contractMsg">
+            <el-checkbox-group v-model="contract.design">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5" label="10">外观设计</el-checkbox>
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5" label="30">结构设计</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>设计类型</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design_type" class="contractMsg">
+            <el-radio-group v-model="contract.design_type">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="item in conDesignType" :label="item"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200 m-t-5" label="其他类型">其他类型<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="designTypeOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>设计输出</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="design_output" class="contractMsg">
+            <el-checkbox-group v-model="contract.design_output">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="item in conDesignOutput" :label="item"></el-checkbox>
+              <el-checkbox :disabled="!edit" class="radio w-200 m-t-5" label="其他（副）">其他（副）<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="designOutputOther"></el-input></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>目标市场</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="market" class="contractMsg">
+            <el-checkbox-group v-model="contract.market">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="mar in conMarket" :label="mar"></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>产品定位</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="position" class="contractMsg">
+            <el-radio-group v-model="contract.position">
+              <el-radio :disabled="!edit" class="m-w-65 m-t-5"  v-for="po in conPosition" :label="po"></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-10"><span class="con-tx-red">*</span>适用人群</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="applicable_people" class="contractMsg">
+            <el-checkbox-group v-model="contract.applicable_people">
+              <el-checkbox :disabled="!edit" class="m-w-65 m-t-5"  v-for="pe in conPeople" :label="pe"></el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>主要材质</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="material" class="contractMsg">
+            <el-radio-group v-model="contract.material">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="ma in conMaterial" :label="ma"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200 m-t-5" label="其他">其他<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="materialOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100 m-t-5"><span class="con-tx-red">*</span>控制面板</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="control_panel" class="contractMsg">
+            <el-radio-group v-model="contract.control_panel">
+              <el-radio :disabled="!edit" class="radio m-w-65 m-t-5" v-for="pa in conPanel" :label="pa"></el-radio>
+              <el-radio :disabled="!edit" class="radio w-200" label="其他">其他<el-input :disabled="!edit" size="small" class="m-l-10 w-120" v-model="panelOther"></el-input></el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>竞争对手</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="competitors">
+            <el-input :disabled="true" v-model="contract.competitors" type="textarea" :rows="3" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>外观尺寸</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="dimensions">
+            <el-input :disabled="true" v-model="contract.dimensions" type="textarea" :rows="3" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+      <div class="con-text fl m-t-20">
+        <div class="tx-r fl w-100"><span class="con-tx-red">*</span>功能及重点要求描述</div>
+        <div class="fl m-l-10 w-620">
+          <el-form-item prop="detail">
+            <el-input :disabled="true" v-model="contract.detail" type="textarea" :rows="5" class="m-l-10 w-620"></el-input>
+          </el-form-item>
+        </div>
+      </div>
+    </el-form>
+    <div class="con-title">备注信息</div>
+    <div class="m-t-20 con-text">
+      1、此表中所述之“产品”，指经此协议项下设计方案及相关技术成果加工形成的产品。
+    </div>
+    <div class="m-t-20 con-text">
+      2、此表中所述之“单位”，为产品最小销售单位（台、个、部、件等）。
+    </div>
+    <div class="m-t-20 con-text">
+      3、本协议及附件所述之“季度”的定义为：第一季度=公历1-3月；第二季度=公历4-6月；第三季度=公历7-9月；第四季度=10-12月。
+    </div>
+    <div class="m-t-40">
+      <el-row :gutter="20">
+        <el-col :span="10" :offset="1" class="pos-rel">
+          <div><span class="labelTitle">甲方：</span>{{contract.party_a_info.company}}</div>
+          <div class="m-t-10"><span class="labelTitle">时间：</span>{{contract.party_a_time}}</div>
+          <div class="agreedIcon" v-show="contract.party_a_status == 1"></div>
+          <div class="unagreedIcon" v-show="contract.party_a_status == 2"></div>
+        </el-col>
+        <el-col :span="2">
+          <div class="con-line2"></div>
+        </el-col>
+        <el-col :span="10" class="pos-rel">
+          <div><span class="labelTitle">乙方：</span>{{contract.party_b_info.company}}</div>
+          <div class="m-t-10"><span class="labelTitle">时间：</span>{{contract.party_b_time}}</div>
+          <div class="agreedIcon" v-show="contract.party_b_status == 1"></div>
+          <div class="unagreedIcon" v-show="contract.party_b_status == 2"></div>
+        </el-col>
+      </el-row>
+    </div>
+    <div class="m-t-40 m-b-20 tx-c" style="width: 100%">
+      <el-button
+        type="text"
+        size="small"
+        @click="getAgreement" class="con-underline">
+        《来设计平台设计合作协议》
+      </el-button>
+    </div>
+    <agree ref="agree" :msg="agreement"></agree>
+  </div>
+</template>
+<script>
+  import http from '../../../assets/js/http'
+  import agree from '../demand/agree.vue'
+  export default {
+    props: ['conId', 'isCom', 'model'],
+    data() {
+      return {
+        contract: {
+          party_a_info: {
+            address: '',
+            company: ''
+          },
+          party_b_info: {
+            address: '',
+            company: ''
+          },
+          design: [],
+          design_type: '',
+          design_output: [],
+          applicable_people: [],
+          market: [],
+          position: '',
+          material: '',
+          control_panel: '',
+          competitors: '',
+          detail: '',
+          title: '',
+          dimensions: '',
+          cost: {
+            end: null,
+            start: null
+          },
+          end_time: '',
+          market_time: '',
+          price: {
+            end: null,
+            start: null
+          },
+          sales: {
+            after_third: null,
+            first: null,
+            second: null,
+            third: null
+          },
+          buyout_1: null,
+          buyout_2: null,
+          buyout_3: null,
+          reach_month: null
+        },
+        tableData: [],
+        agreement: '',
+        conMarket: [],
+        conMaterial: [],
+        conPosition: [],
+        conPeople: [],
+        conPanel: [],
+        conDesignType: [],
+        conDesignOutput: [],
+        designTypeOther: '',
+        designOutputOther: '',
+        materialOther: '',
+        panelOther: ''
+      }
+    },
+    watch: {
+      'model' (to, from) {
+        if (this.model == 1) {
+          this.title = '客户定制项目制合同（即：项目制）'
+        } else {
+          this.title = '产品设计合伙人制合同（即：销量分成制）'
+        }
+      },
+      'conId' (to, from) {
+        this.getContarct()
+        console.log(this.model)
+      }
+    },
+    methods: {
+      // 获取合同详情
+      getContarct() {
+        this.apiGet('orders/' + this.id + '/contracts/' + this.conId).then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.contract = res.data
+            this.tableData = res.data.bonus_program
+            if (res.data.bonus_program) {
+              if ((res.data.bonus_program.length == 3) && (res.data.bonus_program[2].start_count != null)) {
+                this.tableData[2].end_count = '以上'
+              }
+            }
+            if (this.contract.cost == null) {
+              this.contract.cost = {
+                end: null,
+                start: null
+              }
+            }
+            if (this.contract.price == null) {
+              this.contract.price = {
+                end: null,
+                start: null
+              }
+            }
+            if (this.contract.sales == null) {
+              this.contract.sales = {
+                alter_third: null,
+                first: null,
+                second: null,
+                third: null
+              }
+            }
+            if (!_.includes(this.conDesignType, res.data.design_type)) {
+              let designType = res.data.design_type
+              this.contract.design_type = '其他类型'
+              this.designTypeOther = designType
+            }
+            for (let i = res.data.design_output.length - 1; i >= 0; i--) {
+              if (!_.includes(this.conDesignOutput, res.data.design_output[i])) {
+                let designOutput = res.data.design_output[i]
+                this.contract.design_output[i] = '其他（副）'
+                this.designOutputOther = designOutput
+                return
+              }
+            }
+            this.contract.material = '其他'
+            this.materialOther = res.data.material
+            this.contract.control_panel = '其他'
+            this.panelOther = res.data.control_panel
+            for (var i = 0; i < this.conMaterial.length; i++) {
+              if (res.data.material == this.conMaterial[i]) {
+                this.contract.material = res.data.material
+                this.materialOther = ''
+              }
+            }
+            for (var j = 0; j < this.conPanel.length; j++) {
+              if (res.data.control_panel == this.conPanel[j]) {
+                this.contract.control_panel = res.data.control_panel
+                this.panelOther = ''
+              }
+            }
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取协议
+      getAgreement() {
+        this.$refs.agree.open()
+      },
+      // 打开协议详情
+      openAgreement() {
+        this.apiGet('order/contract/agreement').then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.agreement = res.data
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    mounted() {
+      if (this.conId) {
+        this.getContarct()
+      }
+    },
+    created() {
+      this.id = this.$route.params.id
+      this.openAgreement()
+      this.conMarket = window.conMarket
+      this.conPosition = window.conPosition
+      this.conPeople = window.conPeople
+      this.conMaterial = window.conMaterial
+      this.conPanel = window.conPanel
+      this.conDesignType = window.conDesignType
+      this.conDesignOutput = window.conDesignOutput
+    },
+    components: {
+      agree
+    },
+    mixins: [http]
+  }
+</script>

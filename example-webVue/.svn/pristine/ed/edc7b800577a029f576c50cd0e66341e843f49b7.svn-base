@@ -1,0 +1,384 @@
+<template>
+  <el-dialog ref="dialog"
+             title="选择跟进人员"
+             v-model="dialogVisible"
+             class="staff-dialog">
+    <div class="fr w-300 m-b-20">
+      <el-input placeholder="请输入员工姓名"
+                icon="search"
+                v-model="keywords"
+                :on-icon-click="searchStaff">
+      </el-input>
+    </div>
+  
+    <el-tabs type="card"
+             class="tabs"
+             v-loading="loading"
+             v-model="activeName"
+             @tab-click="handleTabChange">
+      <el-tab-pane v-for="(role, index) in roleList"
+                   :label="role.title"
+                   :name="role.title">
+        <div class="staff container"
+             style="min-height:216px">
+          <el-row :gutter="20"
+                  v-if="staffList.length > 0">
+            <el-col :span="6"
+                    class="tx-c"
+                    v-for="item in staffList">
+              <el-button type="text"
+                         :disabled="overLimit(role.title)"
+                         class="cur-pointer"
+                         @click.prevent="selectStaff(item,role.title)">
+                {{ item.name }}
+              </el-button>
+            </el-col>
+          </el-row>
+          <el-row class="tx-c"
+                  type="flex"
+                  justify="center"
+                  align="middle"
+                  style="min-height:216px"
+                  v-show="!loading"
+                  v-else="staffList.length === 0">暂无数据
+          </el-row>
+        </div>
+        <div v-if="totalPages > 1"
+             class="block fr m-t-10">
+          <el-pagination layout="prev, pager, next"
+                         @current-change="handleCurrentChange"
+                         :current-page="currentPage"
+                         :total="totalPages">
+          </el-pagination>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
+  
+    <el-row class="selected-row">
+      <div class="row"
+           v-for="(value,key) in results">
+        {{ key }}：
+        <el-tag closable
+                class="m-r-5"
+                type="primary"
+                @close="releaseConfirm(item)"
+                v-for="(item,index) in results[`${key}`]">
+          {{ item.name }}
+        </el-tag>
+      </div>
+    </el-row>
+  
+    <div slot="footer"
+         class="dialog-footer selected-row">
+      <el-button @click="cancel()">返回</el-button>
+      <el-button type="primary"
+                 @click="handleAssign()"
+                 :disabled="disableAssign">分配</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<style>
+.tabs {
+  margin-top: 45px;
+}
+
+.tabs .el-tabs__nav-wrap {
+  width: 100%;
+}
+
+.tabs .el-pagination {
+  padding: 0;
+}
+
+.staff {
+  text-align: center;
+  cursor: pointer;
+  line-height: 36px;
+}
+
+.pag {
+  margin-right: 20px;
+  clear: both;
+  position: absolute;
+  right: 2em;
+  bottom: 10%;
+}
+
+.staffActive {
+  border: 1px solid #ccc;
+  border-bottom: 2px solid #fff;
+  margin-bottom: -2px;
+  color: #3399FF;
+}
+
+.staff-dialog .el-dialog {
+  min-width: 960px;
+}
+
+.staff-dialog .el-dialog__body {
+  padding-bottom: 0;
+}
+
+.dialog-search input {
+  display: inline-table;
+}
+
+.dialog-footer {
+  padding-top: 0;
+}
+
+.cur-pointer {
+  cursor: pointer;
+}
+
+.staff.container {
+  padding: 20px 0;
+  border-radius: 5px;
+  border: 1px solid #d1dbe5;
+}
+
+.selected-row .row {
+  margin: 8px
+}
+
+.el-tag.el-tag--gray {
+  margin: 0 5px 5px 5px;
+}
+
+.customerData .el-input {
+  display: inline-table;
+}
+</style>
+
+<script>
+import http from 'assets/js/http'
+import _ from 'lodash'
+export default {
+  props: ['followPeople', 'clients', 'callback'],
+  data() {
+    return {
+      loading: false,
+      dialogVisible: false,
+      staffList: [],
+      currentPage: 1,
+      totalPages: 10,
+      keywords: '',
+      results: {},
+      roleList: [],
+      staffName: '',
+      activeName: '',
+      pageType: 'salesman'
+    }
+  },
+  methods: {
+    handleCurrentChange(val) { // 分页的选择
+      this.currentPage = val
+      this.clickSelect(this.pageType)
+    },
+    open() { // 打开模态框
+      this.fetchRole()
+      _(this.followPeople).forEach((item, index) => {
+        if (!this.results[`${item.label}`]) {
+          this.results[`${item.label}`] = []
+        }
+        let isExist = _.find(this.results[`${item.label}`], { id: item.id })
+        !isExist ? this.results[`${item.label}`].push(item) : null
+      })
+      this.$refs.dialog.open()
+    },
+    close() { // 关闭模态框
+      this.$refs.dialog.close()
+      this.callback()
+    },
+    cancel() { // 关闭模态框
+      this.dialogVisible = false
+      this.results = {}
+      this.callback()
+    },
+    handleAssign() { // 根据是否批量处理分配
+      this.isBatchMode ? this.batchAssign() : this.singleAssign()
+    },
+    singleAssign() { // 单个分配
+      for (let key in this.results) {
+        this.results[`${key}`].map((role, index) => {
+          let isExist = _.find(this.followPeople, { id: role.id })
+          !isExist ? this.followPeople.push(role) : null
+        })
+      }
+      let data = {
+        followPeople: this.followPeople.map(item => item.id),
+        id: this.clientIds
+      }
+      this.apiPost('customers/batch_follow', data).then((res) => {
+        if (res.code === 200) {
+          this.dialogVisible = false
+          _g.toastMsg(this, 'success', '分配成功')
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    batchAssign() { // 批量分配
+      let followPeople = []
+      for (let key in this.results) {
+        this.results[`${key}`].map((staff, index) => {
+          followPeople.push(staff.id)
+        })
+      }
+      let data = {
+        followPeople,
+        id: this.clientIds
+      }
+      this.apiPost('customers/batch_follow', data).then((res) => {
+        if (res.code === 200) {
+          this.dialogVisible = false
+          this.callback()
+          _g.toastMsg(this, 'success', '分配成功')
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    handleTabChange(tabs, event) { // 点击tab选择角色
+      let role = this.roleList[~~(tabs.index)]
+      this.fetchStaffByRole(role)
+    },
+    fetchStaffByRole(role) { // 根据角色获取人员
+      this.loading = true
+      this.staffList = []
+      this.activeName = role.title || role.label
+      let params = {
+        role: role.id,
+        page: this.currentPage
+      }
+      this.apiGet('customers/customer_follow', { params }).then((res) => {
+        this.loading = false
+        if (res.code === 200) {
+          this.staffList = res.data.list
+          this.totalPages = res.data.total_pages
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    releaseConfirm(role) { // 确认释放
+      let message = this.isBatchMode ? '确认从已选客户中释放该人员?' : '确认释放该人员?'
+      this.$confirm(message, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        let data = {
+          id: this.clientIds,
+          follow_id: role.id
+        }
+        this.releaseExec(data, role) // 执行释放请求
+      })
+    },
+    releaseExec(data, role) {
+      this.apiPost('customers/free_single', data).then((res) => {
+        if (res.code === 200) {
+          _g.toastMsg(this, 'success', '释放成功')
+          if (!this.isBatchMode) { // 不是批量操作模式，直接释放
+            let isExist = this.followPeople.some(item => item.id === role.id)
+            if (isExist) {
+              this.followPeople.splice(this.followPeople.indexOf(role), 1)
+            }
+            return this.releaseEnd(role, data.follow_id)
+          }
+          this.releaseEnd(role, data.follow_id)
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    releaseEnd(role) { // 释放完毕操作
+      console.log(role)
+      console.log(this.results)
+      let index = _.findIndex(this.results[`${role.label}`], { 'id': role.id })
+      this.results[`${role.label}`].splice(index, 1)
+    },
+    searchStaff() { // 搜索人员
+      this.staffList = []
+      var data = {
+        params: {
+          role: this.activeName,
+          page: this.currentPage,
+          keyword: this.keywords
+        }
+      }
+      this.apiGet('customers/customer_follow', data).then((res) => {
+        if (res.code == 200) {
+          this.staffList = res.data.list
+          this.totalPages = res.data.total_pages * 10
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    selectStaff(item, str) { // 选择人员
+      let { follow_num, count, id, name } = item
+      if (follow_num - count <= 0) {
+        return _g.toastMsg(this, 'warning', '该跟进人员的跟进客户数已达上限！')
+      }
+      if (this.clients.length) {
+        let { length: selLen } = this.clients
+        let maxFollow = follow_num - count
+        if (maxFollow - selLen < 0) {
+          return _g.toastMsg(this, 'warning', `该跟进人员最多还可以跟进${maxFollow}个客户`)
+        }
+      }
+      if (!this.results[`${this.activeName}`]) {
+        this.$set(this.results, `${this.activeName}`, [])
+      }
+      this.results[`${this.activeName}`].push({ id, name, label: this.activeName })
+    },
+    fetchRole() { // 获取跟进人员角色列表
+      this.apiGet('customers/follow_role').then((res) => {
+        if (res.code === 200) {
+          this.roleList = res.data
+          this.fetchStaffByRole(res.data[0])
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    overLimit(role) { // 当前角色是否已有选择人员，有则禁用角色选择
+      let current = this.results[`${this.activeName}`] || []
+      return current.length > 0
+    }
+  },
+  computed: {
+    hasSaler() { // 是否有销售人员
+      return this.saleStaff.length > 0
+    },
+    hasServicer() { // 是否有客服
+      return this.serviceStaff.length > 0
+    },
+    hasPusher() { // 是否有地推
+      return this.pushStaff.length > 0
+    },
+    disableAssign() { // 分配按钮不可点击
+      let repeat = false
+      let count = 0
+      _(this.roleList).forEach(item => {
+        let arr = this.results[`${item.title}`] || []
+        count += arr.length
+        arr.length > 1 ? repeat = true : null
+      })
+      return repeat || count === 0
+    },
+    isBatchMode() { // 是否为批量模式
+      return this.clients.length > 0
+    },
+    clientIds() {
+      return this.clients.length > 0 ? this.clients : [~~(this.$route.params.id)]
+    }
+  },
+  components: {
+    // info
+  },
+  mixins: [http]
+}
+</script>

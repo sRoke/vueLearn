@@ -1,0 +1,445 @@
+<template>
+  <div class="m-l-50 m-t-30 w-800" id='roleAdd'>
+    <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+      <el-form-item label="角色" prop="role_name">
+        <el-input v-model.trim="form.role_name" class="h-40 w-200"></el-input>
+      </el-form-item>
+      <el-form-item label="描述">
+        <el-input type="textarea" v-model.trim="form.role_depict" :rows="4"></el-input>
+      </el-form-item>
+      <el-form-item label="权限节点" class="roleCheckbox" prop="powers">
+        <el-row v-show='serviceShow' class='row-border'>
+          <div class='big-title'>业务管理</div>
+          <div v-show='serSubshow.demand'>
+            <el-form-item label='需求管理' class='row-bordb'>
+              <el-checkbox-group v-model="demandSel">
+                <el-checkbox v-for="ssubitem in serviceRole.demandRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='serSubshow.order'>
+            <el-form-item label='订单管理' class='row-bordb'>
+              <el-checkbox-group v-model="orderSel">
+                <el-checkbox v-for="ssubitem in serviceRole.orderRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='serSubshow.finance'>
+            <el-form-item label='财务管理'>
+              <el-checkbox-group v-model="financeSel">
+                <el-checkbox v-for="ssubitem in serviceRole.financeRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+        </el-row>
+        <el-row v-show='clientShow' class='row-border'>
+          <div class='big-title'>客户关系管理</div>
+          <div v-show='clientSubshow.pub' class='row-bordb'>
+            <el-form-item label='公海客户'>
+              <el-checkbox-group v-model="pubSel">
+                <el-checkbox v-for="ssubitem in clientRole.pubRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='clientSubshow.my'>
+            <el-form-item label='我的客户'>
+              <el-checkbox-group v-model="mySel">
+                <el-checkbox v-for="ssubitem in clientRole.myRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+        </el-row>
+        <el-row v-show='dataShow' class='row-border'>
+          <div class='big-title'>数据管理</div>
+          <div v-show='dataSubshow.ser'>
+            <el-form-item label='账号管理' class='row-bordb'>
+              <el-checkbox-group v-model="serviceSel">
+                <el-checkbox v-for="ssubitem in dataRole.serRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='dataSubshow.Class'>
+            <el-form-item label='分类标签' class='row-bordb'>
+              <el-checkbox-group v-model="classSel">
+                <el-checkbox v-for="ssubitem in dataRole.classRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='dataSubshow.cont'>
+            <el-form-item label='内容管理'>
+              <el-checkbox-group v-model="contSel">
+                <el-checkbox v-for="ssubitem in dataRole.contRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+        </el-row>
+        <el-row v-show='systemShow' class='row-border'>
+          <div class='big-title'>系统管理</div>
+          <div v-show='sysSubshow.role'>
+            <el-form-item label='权限管理' class='row-bordb'>
+              <el-checkbox-group v-model="roleSel">
+                <el-checkbox v-for="ssubitem in systemRole.roleRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+          <div v-show='sysSubshow.sys'>
+            <el-form-item label='系统管理' class='row-bordb'>
+              <el-checkbox-group v-model="systemSel">
+                <el-checkbox v-for="ssubitem in systemRole.systemRole" v-show='ssubitem.visible == 1' :label="ssubitem.title"></el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+          </div>
+        </el-row>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="add()" :loading="isLoading">提交</el-button>
+        <el-button @click="goback()">返回</el-button>
+      </el-form-item>
+    </el-form>
+  </div>
+</template>
+<style type="text/css">
+  #roleAdd .big-title{
+    padding: 0px 0px;
+    text-align: left;
+    text-indent: 10px;
+    background: #CCCCCC;
+    border-bottom: 1px solid #48576a; 
+  }
+  #roleAdd .row-border{
+    border: 1px solid #48576a; 
+    border-bottom: 0px;
+  }
+  #roleAdd .row-bordb{
+    border-bottom: 1px solid #48576a; 
+  }
+  .form-checkbox:first-child{
+    margin-left: 15px;
+  }
+  .roleCheckbox .el-checkbox-group label:first-child {
+    margin-left: 15px;
+  }
+  .row-border .el-form-item__label:before{
+    display: none
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import fromRole from '../../../assets/js/role'
+  export default {
+    data() {
+      return {
+        form: {
+          role_name: '',
+          role_depict: '',
+          powers: []
+        },
+        ruleOptions: [],
+        rules: {
+          role_name: [
+            { required: true, message: '请输入角色名' }
+          ],
+          powers: [
+            { required: true, message: '请选择权限节点' }
+          ]
+        },
+        isLoading: false,
+        serviceRole: {
+          demandRole: [],
+          orderRole: [],
+          financeRole: []
+        },
+        clientRole: {
+          myRole: [],
+          pubRole: []
+        },
+        dataRole: {
+          serRole: [],
+          classRole: [],
+          contRole: []
+        },
+        systemRole: {
+          roleRole: [],
+          systemRole: []
+        },
+        serviceShow: false,
+        serSubshow: {
+          demand: false,
+          order: false,
+          finance: false
+        },
+        clientShow: false,
+        clientSubshow: {
+          my: false,
+          pub: false
+        },
+        dataShow: false,
+        dataSubshow: {
+          ser: false,
+          Class: false,
+          cont: false
+        },
+        systemShow: false,
+        sysSubshow: {
+          role: false,
+          sys: false
+        },
+        demandSel: [],
+        systemSel: [],
+        roleSel: [],
+        contSel: [],
+        classSel: [],
+        serviceSel: [],
+        pubSel: [],
+        mySel: [],
+        financeSel: [],
+        orderSel: []
+      }
+    },
+    watch: {
+      serviceSel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看') < 0 && newVal.length != 0) {
+          newVal.push('查看')
+        }
+      },
+      pubSel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看') < 0 && newVal.length != 0) {
+          newVal.push('查看')
+        }
+      },
+      demandSel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看') < 0 && newVal.length != 0) {
+          newVal.push('查看')
+        }
+      },
+      orderSel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看') < 0 && newVal.length != 0) {
+          newVal.push('查看')
+        }
+      },
+      financeSel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看') < 0 && newVal.length != 0) {
+          newVal.push('查看')
+        }
+      },
+      mySel(newVal) {
+        var str = newVal.join('')
+        if (str.indexOf('查看我的客户') < 0 && newVal.length != 0) {
+          newVal.push('查看我的客户')
+        }
+      }
+    },
+    methods: {
+      sortRole() {
+        var serviceRoleList = [] // 业务管理
+        if (this.demandSel.length > 0) {
+          serviceRoleList = fromRole.pushRole(this.ruleOptions, serviceRoleList, this.demandSel, 0, 0)
+        }
+        if (this.orderSel.length > 0) {
+          serviceRoleList = fromRole.pushRole(this.ruleOptions, serviceRoleList, this.orderSel, 0, 1)
+        }
+        if (this.financeSel.length > 0) {
+          serviceRoleList = fromRole.pushRole(this.ruleOptions, serviceRoleList, this.financeSel, 0, 2)
+        }
+        if (serviceRoleList.length > 0) {
+          serviceRoleList.push(this.ruleOptions[0]['id'])
+        }
+
+        var clientRoleList = []
+        if (this.pubSel.length > 0) {
+          clientRoleList = fromRole.pushRole(this.ruleOptions, clientRoleList, this.pubSel, 1, 0)
+        }
+        if (this.mySel.length > 0) {
+          clientRoleList = fromRole.pushRole(this.ruleOptions, clientRoleList, this.mySel, 1, 1)
+        }
+        if (clientRoleList.length > 0) {
+          clientRoleList.push(this.ruleOptions[1]['id'])
+        }
+
+        var dataRoleList = []
+        if (this.serviceSel.length > 0) {
+          dataRoleList = fromRole.pushRole(this.ruleOptions, dataRoleList, this.serviceSel, 2, 0)
+        }
+        if (this.classSel.length > 0) {
+          dataRoleList = fromRole.pushRole(this.ruleOptions, dataRoleList, this.classSel, 2, 1)
+        }
+        if (this.contSel.length > 0) {
+          dataRoleList = fromRole.pushRole(this.ruleOptions, dataRoleList, this.contSel, 2, 2)
+        }
+        if (dataRoleList.length > 0) {
+          dataRoleList.push(this.ruleOptions[2]['id'])
+        }
+
+        var systemRoleList = []
+        if (this.roleSel.length > 0) {
+          systemRoleList = fromRole.pushRole(this.ruleOptions, systemRoleList, this.roleSel, 3, 0)
+        }
+        if (this.systemSel.length > 0) {
+          systemRoleList = fromRole.pushRole(this.ruleOptions, systemRoleList, this.systemSel, 3, 1)
+        }
+        if (systemRoleList.length > 0) {
+          systemRoleList.push(this.ruleOptions[3]['id'])
+        }
+
+        var list = _.union(serviceRoleList, clientRoleList, dataRoleList, systemRoleList)
+        list = fromRole.pushContainRole(list) // 把所属的权限添加进去
+        console.log(list)
+        return list
+      },
+      add() {
+        this.isLoading = true
+        this.form.powers = this.sortRole()
+        if (this.form.powers.length == 0) {
+          _g.toastMsg(this, 'warning', '请选择权限节点')
+          this.isLoading = !this.isLoading
+          return
+        }
+        this.$refs.form.validate((pass) => {
+          if (pass) {
+            this.apiPost('groups', this.form).then((res) => {
+              console.log(res)
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '添加成功')
+                setTimeout(() => {
+                  this.isLoading = !this.isLoading
+                  this.goback()
+                }, 1500)
+              } else {
+                this.isLoading = !this.isLoading
+                _g.dealError(this, res)
+              }
+            })
+          } else {
+            this.isLoading = !this.isLoading
+          }
+        })
+      },
+      goback() {
+        router.go(-1)
+      },
+      // 获取权限列表
+      getAllRules() {
+        this.apiGet('rules').then((res) => {
+          // console.log(res)
+          if (res.code == 200) {
+            this.ruleOptions = res.data
+            _(this.ruleOptions).forEach((res) => {
+              switch (res.title) {
+                case '业务管理':
+                  if (res.visible == 1) {
+                    this.serviceShow = true
+                    _(res.child).forEach((cres) => {
+                      switch (cres.title) {
+                        case '需求管理':
+                          this.serviceRole.demandRole = cres.child
+                          if (cres.visible == 1) {
+                            this.serSubshow.demand = true
+                          }
+                          break
+                        case '订单管理':
+                          this.serviceRole.orderRole = cres.child
+                          if (cres.visible == 1) {
+                            this.serSubshow.order = true
+                          }
+                          break
+                        case '财务管理':
+                          this.serviceRole.financeRole = cres.child
+                          if (cres.visible == 1) {
+                            this.serSubshow.finance = true
+                          }
+                          break
+                      }
+                    })
+                  }
+                  break
+                case '客户关系管理':
+                  if (res.visible == 1) {
+                    this.clientShow = true
+                    _(res.child).forEach((cres) => {
+                      switch (cres.title) {
+                        case '公海客户':
+                          this.clientRole.pubRole = cres.child
+                          if (cres.visible == 1) {
+                            this.clientSubshow.pub = true
+                          }
+                          break
+                        case '我的客户':
+                          this.clientRole.myRole = cres.child
+                          if (cres.visible == 1) {
+                            this.clientSubshow.my = true
+                          }
+                          break
+                      }
+                    })
+                  }
+                  break
+                case '数据管理':
+                  if (res.visible == 1) {
+                    this.dataShow = true
+                    _(res.child).forEach((cres) => {
+                      switch (cres.title) {
+                        case '账号管理':
+                          this.dataRole.serRole = cres.child
+                          if (cres.visible == 1) {
+                            this.dataSubshow.ser = true
+                          }
+                          break
+                        case '分类标签':
+                          this.dataRole.classRole = cres.child
+                          if (cres.visible == 1) {
+                            this.dataSubshow.Class = true
+                          }
+                          break
+                        case '内容管理':
+                          this.dataRole.contRole = cres.child
+                          if (cres.visible == 1) {
+                            this.dataSubshow.cont = true
+                          }
+                          break
+                      }
+                    })
+                  }
+                  break
+                case '系统管理':
+                  if (res.visible == 1) {
+                    this.systemShow = true
+                    _(res.child).forEach((cres) => {
+                      switch (cres.title) {
+                        case '权限管理':
+                          this.systemRole.roleRole = cres.child
+                          if (cres.visible == 1) {
+                            this.sysSubshow.role = true
+                          }
+                          break
+                        case '系统管理':
+                          this.systemRole.systemRole = cres.child
+                          if (cres.visible == 1) {
+                            this.sysSubshow.sys = true
+                          }
+                          break
+                      }
+                    })
+                  }
+                  break
+              }
+            })
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    created() {
+      this.getAllRules()
+    },
+    components: {
+
+    },
+    mixins: [http]
+  }
+</script>

@@ -1,0 +1,342 @@
+<template>
+  <div id='record'>
+    <el-row>
+      <div class="m-b-20 ovf-hd">
+        <div class="fr m-r-5 w-300">
+          <el-input placeholder="输入名称，交易方搜索" v-model="postData.keyword" class="w-250">
+            <el-button slot="append" icon="search" @click="search()"></el-button>
+          </el-input>
+          <reset-btn class="fr m-l-5"
+                 :reset="handleClearFilter"></reset-btn>
+        </div>
+        <div class="fr m-r-5 w-140">
+          <el-select v-model="is_please" placeholder="请选择是否请款" @change="search()">
+            <el-option
+              v-for="items in isPlease"
+              :label="items.label"
+              :value="items.value">
+            </el-option>
+          </el-select>
+        </div>
+        <div class="fr m-r-5 w-140">
+          <el-select v-model="postData.fundVal" placeholder="请选择款项类型" @change="search()">
+            <el-option
+              v-for="item in fundType"
+              :label="item.label"
+              :value="item.value">
+            </el-option>
+          </el-select>
+        </div>
+      </div>
+    </el-row>
+    <el-table
+    :data="tableData"
+    style="width: 100%"
+    @selection-change="handleSelectionChange"
+    v-loading.lock="fullscreenLoading" 
+    element-loading-text="正在加载中">
+      <el-table-column
+        type="selection"
+        width="55"
+        v-if="showDelete">
+      </el-table-column>
+      <el-table-column
+      prop="fi_number"
+      label="财务编号">
+      </el-table-column>
+      <el-table-column
+      prop="title"
+      label="名称" width= "160px">
+      </el-table-column>
+      <el-table-column
+      prop="name"
+      label="款项名">
+      </el-table-column>
+      <el-table-column
+      prop="re_number"
+      label="需求编号">
+      </el-table-column>
+      <el-table-column
+      prop="o_number"
+      label="订单编号">
+      </el-table-column>
+      <el-table-column
+      prop="amount"
+      label="金额" width="100px">
+      </el-table-column>
+      <el-table-column
+      prop="user_name"
+      label="交易方">
+      </el-table-column>
+      <!-- <el-table-column
+      prop="transaction_type"
+      label="交易类型">
+      </el-table-column> -->
+      <el-table-column
+      label="备注">
+        <template scope="scope">
+          {{scope.row.remark}}
+          <i class="el-icon-edit edit" @click='edit(scope.row, scope.$index)' v-show="allEdit"></i>
+        </template>
+      </el-table-column>
+      <el-table-column
+      prop="please"
+      label="是否请款" width="100px">
+      </el-table-column>
+      <el-table-column
+      prop="create_time"
+      label="创建时间"
+      width="135px">
+      </el-table-column>
+      <el-table-column
+      label="操作">
+        <template scope="scope">
+          <el-button
+            size="small"
+            type="primary"
+            @click="operation(scope.row)"
+            v-show="allEdit">
+            <div v-show='scope.row.action_type == 1'>确认收款</div>
+            <div v-show='scope.row.action_type == 2'>确认付款</div>
+            <div v-show='scope.row.action_type == 3'>确认退款</div>
+          </el-button>
+          <!-- <el-button v-if='allEdit' class="m-l-5" size="small" type="danger" @click="sureDel(scope.row)">删除</el-button> -->
+        </template>
+      </el-table-column>
+    </el-table>
+    <!-- <div class="fl m-t-10" v-if='delEdit'>
+      <el-button type="primary" size="small" v-show='!showDelete' @click='multiDelete'>批量删除</el-button>
+      <el-button type="primary" size="small" v-show='showDelete' @click='cancelDel'>取消</el-button>
+      <el-button type="danger" size="small" v-show='showDelete' @click='sureDel()'>确定删除</el-button>
+    </div> -->
+    <div class="pos-rel p-t-20" v-show="isPage">
+      <div class="block pages m-b-10">
+        <el-pagination
+        @current-change="handleCurrentChange"
+        @size-change="handleSizeChange"
+        layout="total, sizes, prev, pager, next, jumper"
+        :page-sizes="[15, 30, 50, 100]"
+        :page-size="pagesize"
+        :current-page="currentPage"
+        :total="dataCount">
+        </el-pagination>
+      </div>
+    </div>
+    <editInfo :info="curRemark" ref="editInfo"></editInfo>
+  </div>
+</template>
+<style type="text/css">
+  #record .edit{
+    cursor: pointer;
+    color: #20a0ff;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import editInfo from './edit.vue'
+  import Vue from 'vue'
+  import resetBtn from '../../common/reset.vue'
+  export default {
+    data() {
+      return {
+        fullscreenLoading: false,
+        tableData: [],
+        dataCount: 1,
+        isPage: false,
+        editId: null,
+        editIndex: null,
+        curRemark: '',
+        is_please: null,
+        postData: {
+          fundVal: '',
+          keyword: ''
+        },
+        isPlease: [{
+          value: '2',
+          label: '全部'
+        }, {
+          value: '1',
+          label: '已请款'
+        }, {
+          value: '0',
+          label: '未请款'
+        }],
+        fundType: [{
+          value: '0',
+          label: '全部'
+        }, {
+          value: '10',
+          label: '首款'
+        }, {
+          value: '20',
+          label: '尾款'
+        }, {
+          value: '30',
+          label: '项目款'
+        }, {
+          value: '40',
+          label: '提成'
+        }, {
+          value: '50',
+          label: '一键买断提成'
+        }],
+        allEdit: false,
+        currentPage: 1,
+        pagesize: 15,
+        deleteAll: [],
+        showDelete: false,
+        delEdit: false
+      }
+    },
+    methods: {
+      handleClearFilter() {
+        this.postData.fundVal = ''
+        this.postData.keyword = ''
+        this.is_please = ''
+      },
+      operation(item) {
+        this.$confirm('确定后将不可撤销，是否继续？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          var type = ''
+          if (item.action_type == 1) {
+            type = 'receipt'
+          } else if (item.action_type == 2) {
+            type = 'pay'
+          } else if (item.action_type == 3) {
+            type = 'confirmRefund'
+          }
+          this.apiPut('finances/', item.id, { 'action_type': type }).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '确认成功')
+              this.getAllData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+        })
+      },
+      edit(row, index) {
+        this.editId = row.id
+        this.editIndex = index
+        this.curRemark = row.remark
+        this.$refs.editInfo.open()
+      },
+      search() {
+        if (this.postData.fundVal == '0') {
+          this.postData.fundVal = ''
+        }
+        if (this.is_please == '2') {
+          this.is_please = ''
+        }
+        this.getAllData()
+      },
+      handleSelectionChange(val) {
+        this.deleteAll = []
+        _(val).forEach((res, key) => {
+          this.deleteAll.push(res.id)
+        })
+      },
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.getAllData()
+      },
+      handleSizeChange(val) {
+        this.pagesize = val
+        this.getAllData(1)
+      },
+      getAllData(num) {
+        this.fullscreenLoading = true
+        if (num) {
+          this.currentPage = 1
+        }
+        let data = {
+          params: {
+            pagesize: this.pagesize,
+            page: this.currentPage,
+            keyword: this.postData.keyword,
+            amount_type: this.postData.fundVal,
+            is_please: this.is_please
+          }
+        }
+        this.apiGet('finances/payment', data).then((res) => {
+          this.fullscreenLoading = false
+          if (res.code == 200) {
+            if (res.data.list.length > 0) {
+              this.isPage = true
+            } else {
+              this.isPage = false
+            }
+            this.tableData = res.data.list
+            this.dataCount = res.data.page.total_count
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      updateRemark(newVal) {
+        this.apiPut('finances/', this.editId, { action_type: 'remark', remark: newVal }).then((res) => {
+          if (res.code == 200) {
+            var curItem = this.tableData[this.editIndex]
+            curItem.remark = newVal
+            Vue.set(this.tableData, this.editIndex, curItem)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      multiDelete() {
+        this.showDelete = true
+      },
+      sureDel(row) {
+        if (row) {
+          this.deleteAll = []
+          this.deleteAll.push(row.id)
+        }
+        if (this.deleteAll.length != 0) {
+          this.$confirm('确认删除该财务记录？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            this.apiDelete('finances/', this.deleteAll.join(',')).then((res) => {
+              if (res.code == 200) {
+                this.getAllData()
+                _g.toastMsg(this, 'success', '删除成功')
+              } else {
+                _g.dealError(self, res)
+              }
+            })
+          }).catch(() => {
+          })
+        } else {
+          _g.toastMsg(this, 'warning', '请勾选数据')
+        }
+      },
+      cancelDel() {
+        this.showDelete = false
+      }
+    },
+    created() {
+      this.fullscreenLoading = true
+      let auth = Lockr.get('authList')
+      if (auth) {
+        if (typeof (auth.finance_edit) != 'undefined') {
+          this.allEdit = true
+        }
+      } else {
+        this.allEdit = true
+        this.delEdit = true
+      }
+      this.getAllData()
+    },
+    components: {
+      'reset-btn': resetBtn,
+      editInfo
+    },
+    mixins: [http]
+  }
+</script>

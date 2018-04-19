@@ -1,0 +1,298 @@
+<template>
+<div>
+  <el-row v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+    <div class="m-b-20 ovf-hd">
+    <el-button class="m-b-20 btn-link-large add-btn f-l" @click="addVideo()">
+      <i class="el-icon-plus"></i>&nbsp;&nbsp;添加
+    </el-button>
+      <div class="fr ">
+        <el-input placeholder="请输入视频名称搜索" v-model="keyword" class="w-200">
+          <el-button slot="append" icon="search" @click="select()"></el-button>
+        </el-input>
+        <reset-btn class="fr m-l-10"
+                 :reset="handleClearFilter"></reset-btn>
+      </div>
+    </div>
+  </el-row>
+  <el-table
+  ref="t1"
+  class='m-w-1280'
+     :data="tableData"
+     @sort-change="sorts"
+     @selection-change="handleSelectionChange"
+     >
+     <el-table-column
+      type="selection"
+      v-if='isMDel'
+      :reserve-selection=true
+      :selectable='isSelect'
+      width="55">
+    </el-table-column>
+     <el-table-column
+       label="编号"
+       >
+       <template scope="scope">
+         <span >{{ scope.row.num }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="封面"
+       >
+       <template scope="scope">
+        <img :src='scope.row.img_url'/>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="视频名称"
+       >
+       <template scope="scope">
+         <span @click="watch(scope.row.id)" class="now">{{ scope.row.name }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="简介"
+       min-width="100"
+       show-overflow-tooltip>
+       <template scope="scope">
+         <span >{{ scope.row.description }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="点击量"
+       >
+       <template scope="scope">
+         <span >{{ scope.row.click_sum }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="排序"
+        sortable="false" 
+        prop="sort">
+       <template scope="scope">
+         <span>{{ scope.row.sort }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column label="操作">
+       <template scope="scope">
+         <el-button
+           size="small"
+           type="primary"
+           @click="handleEdit(scope.row.id)">编辑</el-button>
+         <el-button
+           size="small"
+           type="danger"
+           @click="confirmDelete(scope.row)">删除</el-button>
+       </template>
+     </el-table-column>
+  </el-table>
+  <addVideo ref="addVideo" :info="tableData"></addVideo>
+  <editVideo ref="editVideo" :info="tabalData"></editVideo>
+  <watchVideo ref="watchVideo" :info="tabalData"></watchVideo>
+  <div class="pos-rel p-t-20" v-show="isPage">
+    <div class="block pages m-b-10">
+      <el-pagination
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+      layout="total, sizes, prev, pager, next, jumper"
+      :page-sizes="[15, 30, 50, 100]"
+      :page-size="pageSize"
+      :current-page="currentPage"
+      :total="dataCount">
+      </el-pagination>
+    </div>
+  </div>
+  <div class="fl">
+    <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+  </div>
+</div>
+</template>
+<style>
+  .el-table .cell img{
+    width: 50px;
+    height: 50px;
+  }
+</style>
+<script>
+  import resetBtn from '../../common/reset.vue'
+  import http from '../../../assets/js/http'
+  import addVideo from './video_add.vue'
+  import editVideo from './video_edit.vue'
+  import watchVideo from './video_watch.vue'
+  export default {
+    watch: {
+      '$route'(to, from) {
+        var self = this
+        self.init()
+      }
+    },
+    methods: {
+      handleClearFilter() {
+        this.keyword = ''
+        this.getData()
+      },
+      select() {
+        var self = this
+        router.push({ path: '/data/info/video', query: { page: self.currentPage, pagesize: self.pageSize, keyword: self.keyword, sort: self.sort }})
+      },
+      init() {
+        this.fullscreenLoading = true
+        var self = this
+        if (self.$route.fullPath == '/data/info/video') {
+          self.pageSize = 15
+          self.currentPage = 1
+          self.keyword = ''
+          self.sort = ''
+        } else {
+          self.pageSize = self.$route.query.pagesize * 1
+          self.currentPage = self.$route.query.page * 1
+          self.keyword = self.$route.query.keyword
+          self.sort = self.$route.query.sort
+        }
+        self.getData()
+      },
+      getData() {
+        this.apiGet('videos?page=' + this.currentPage + '&pagesize=' + this.pageSize + '&keyword=' + encodeURI(this.keyword) + '&sort=' + this.sort).then((res) => {
+          this.fullscreenLoading = false
+          if (res.code == 200) {
+            // console.log(res.data)
+            if (res.data.list.length > 0) {
+              this.isPage = true
+            }
+            let data = {}
+            this.tableData = _(res.data.list).forEach((val, key) => {
+              if (val.img_url) {
+                val.img_url = window.imgUrl + val.img_url + '_285x220_.jpg'
+              }
+            })
+            this.dataCount = res.data.total_count
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      sorts() {
+        // console.log(this.sort)
+        // console.log(this.x)
+        if (this.x % 2 == 0) {
+          this.sort = 2
+          this.select()
+          this.x ++
+        } else {
+          this.sort = 1
+          this.select()
+          this.x ++
+        }
+      },
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.select()
+        // console.log(val)
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        this.currentPage = 1
+        this.select()
+        // console.log(`每页 ${val} 条`)
+      },
+      handleEdit(id) {
+        // console.log(id)
+        this.tableData = this.tableData
+        this.$refs.editVideo.open(id)
+      },
+      confirmDelete(item) {
+        this.$confirm('确认删除?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('videos/', item.id).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          })
+        })
+      },
+      addVideo() {
+        this.$refs.addVideo.open()
+      },
+      watch(id) {
+        this.$refs.watchVideo.open(id)
+      },
+      isSelect(row, index) {
+        return true
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      sureDel() {
+        if (this.delList.length == 0) {
+          _g.toastMsg(this, 'warning', '请选择删除项')
+        } else {
+          let asd = {
+            delList: this.delList
+            // delList: this.delList
+          }
+          console.log(asd)
+          this.apiPost('videos/destroy', asd).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+          this.isMDel = false
+        }
+        console.log((this.delList))
+      },
+      cancelDel() {
+        this.$refs.t1.clearSelection(this.tableData)
+        this.isMDel = false
+      },
+      handleSelectionChange(val) {
+        this.delList = []
+        _(val).forEach((res, key) => {
+          this.delList.push(res.id)
+        })
+      }
+    },
+    data() {
+      return {
+        sort: null,
+        x: 1,
+        pageSize: 15,
+        currentPage: 1,
+        dataCount: null,
+        keyword: '',
+        isPage: false,
+        tableData: [],
+        isMDel: false,
+        delList: [],
+        fullscreenLoading: false
+      }
+    },
+    created() {
+      this.init()
+      let data = {}
+      this.apiGet('projects', data).then((res) => {
+      })
+    },
+    components: {
+      'reset-btn': resetBtn,
+      addVideo,
+      editVideo,
+      watchVideo
+    },
+    mixins: [http]
+  }
+</script>

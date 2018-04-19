@@ -1,0 +1,168 @@
+<template>
+
+  <el-dialog ref="dialog" :title="title" v-model="dialogVisible" size="tiny">
+    <el-form ref="form" :inline="true" :model="form" label-width="90px">
+      <el-row v-show="isDemand">
+        <el-col>
+          <el-form-item label="文件类型" :rules="[
+        { required: true, message: '请选择文件类型'}]" prop="type">
+            <el-select v-model="form.type"
+                       placeholder="请选择文件类型" class="w-150">
+              <el-option v-for="item in fileOption"
+                         :label="item.label"
+                         :value="item.label">
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col>
+          <el-form-item label="文件名" class='w-100p' prop='name' :rules="[
+        { required: true, message: '文件名不能为空'}]">
+            <el-input v-model="form.name" style="margin-left: 0"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-form-item label="备注" class='w-100p'>
+          <el-input type="textarea" class="textC" v-model="form.desc"></el-input>
+        </el-form-item>
+      </el-row>
+      <el-row>
+        <el-form-item>
+          <el-upload
+            :action="uploadUrl"
+            :on-remove="handleRemove"
+            :on-success="uploadSuccess"
+            :on-error="uploadFail"
+            :file-list="form.fileList">
+            <el-button type="text" size='mini' v-bind:class="{hide_upload: !showBtn}">
+              <i class="el-icon-plus m-r-5"></i>选择文件
+            </el-button>
+            <div slot="tip" class="el-upload__tip">允许文件：pdf，png，gif，jpg，jpeg，svg，rar，zip，xls
+            </div>
+          </el-upload>
+        </el-form-item>
+      </el-row>
+    </el-form>
+    <span slot="footer" class="dialog-footer">
+      <el-button @click='close()'>取 消</el-button>
+      <el-button type="primary" @click="submit()" :loading="isLoading">确 定</el-button>
+    </span>
+  </el-dialog>
+</template>
+<style>
+  .textC .el-textarea__inner{
+    height: 100px;
+  }
+  .hide_upload{
+    display: none;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['title'],
+    data() {
+      return {
+        isDemand: false,
+        isLoading: false,
+        dialogVisible: false,
+        uploadUrl: '',
+        showBtn: true,
+        form: {
+          type: '',
+          name: '',
+          desc: '',
+          fileList: []
+        },
+        fileOption: [{
+          label: '营业执照',
+          value: 0
+        }, {
+          label: '企业资质',
+          value: 1
+        }, {
+          label: '获奖证明',
+          value: 2
+        }, {
+          label: '其他',
+          value: 3
+        }]
+      }
+    },
+    methods: {
+      open(x) {
+        if (x == 'demand') {
+          this.isDemand = true
+          console.log('111')
+        }
+        var self = this
+        self.$refs.dialog.open()
+        this.form.name = ''
+        this.form.desc = ''
+        this.showBtn = true
+        this.form.fileList = []
+        this.isLoading = false
+      },
+      close() {
+        var self = this
+        self.$refs.dialog.close()
+      },
+      submit() {
+        this.isLoading = true
+        console.log(this.form.fileList)
+        var self = this
+        if (self.form.name != '' && self.form.fileList.length != 0) {
+          self.$parent.addData(self.form)
+          console.log('2222')
+          // if (this.isDemand == true) {
+          //   self.$parent.addUpdate()
+          // }
+          self.$refs.dialog.close()
+          // this.isLoading = !this.isLoading
+        } else if (self.form.name == '') {
+          self.$message({
+            type: 'info',
+            message: '请填写文件名'
+          })
+          this.isLoading = !this.isLoading
+        } else {
+          self.$message({
+            type: 'info',
+            message: '请上传文件'
+          })
+          this.isLoading = !this.isLoading
+        }
+      },
+      uploadFail(err, res, file) {
+        console.log('err = ', _g.j2s(err))
+        console.log('res = ', _g.j2s(res))
+      },
+      handleRemove(file, fileList) {
+        // this.showBtn = true
+        // this.fileList = []
+        var self = this
+        self.showBtn = true
+        self.form.fileList = []
+      },
+      uploadSuccess(res, file, fileList) {
+        if (res.code === 400) {
+          this.handleRemove(file, fileList)
+          return _g.dealError(this, res)
+        }
+        var self = this
+        self.showBtn = false
+        self.form.fileList = fileList
+        // console.log(JSON.stringify(fileList))
+        console.log('res = ', res)
+        self.form.path = res.data
+      }
+    },
+    created() {
+      this.uploadUrl = window.HOST + 'Upload/data'
+    },
+    mixins: [http]
+  }
+</script>

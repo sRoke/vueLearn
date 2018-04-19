@@ -1,0 +1,134 @@
+<template>
+  <el-dialog :title="dialogTitle"
+             ref="contact"
+             size="tiny"
+             v-model="dialogVisible">
+  
+    <el-form :model="contactForm"
+             v-if="dialogVisible"
+             :rules="rules"
+             ref="contactForm"
+             label-width="100px"
+             class="demo-ruleForm">
+  
+      <el-form-item label="姓名"
+                    prop="name">
+        <el-input class="w-300"
+                  v-model="contactForm.name"></el-input>
+      </el-form-item>
+      <el-form-item label="职位"
+                    prop="position">
+        <el-input class="w-300"
+                  v-model="contactForm.position"></el-input>
+      </el-form-item>
+      <el-form-item label="手机"
+                    prop="phone">
+        <el-input class="w-300"
+                  v-model="contactForm.phone" :disabled="onlyRead"></el-input>
+      </el-form-item>
+      <el-form-item label="邮箱"
+                    prop="email">
+        <el-input class="w-300"
+                  v-model="contactForm.email"></el-input>
+      </el-form-item>
+    </el-form>
+    <div slot="footer"
+         class="dialog-footer">
+      <el-button @click="dialogVisible = false">取 消</el-button>
+      <el-button type="primary"
+                 v-if="addMode"
+                 @click="submitForm('contactForm')">添 加</el-button>
+      <el-button type="primary"
+                 v-if="editMode"
+                 @click="submitForm('contactForm')">保 存</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+/**
+ * ---------------- Usage ----------------
+ * <contact
+ * v-if="对话框是否可见(bool)"
+ * type="添加或编辑模式(string:'add' or 'edit')”
+ * handleSubmit="添加新联系人事件function(contact)"
+ * handleEdit="编辑保存联系人function(contact)">
+ * </contact>
+ *
+ * ---------------- Usage ----------------
+ * **/
+export default {
+  props: ['handleSubmit', 'handleEdit', 'type', 'sourceData'],
+  data() {
+    return {
+      onlyRead: false,
+      rules: {
+        name: [
+          { required: true, message: '请输入姓名', trigger: 'blur' }
+        ],
+        position: [
+          { required: false, message: '请输入职位', trigger: 'blur' }
+        ],
+        phone: [
+          { required: true, pattern: /^1[0-9]{10}$/, message: '请输入手机号', trigger: 'blur' }
+        ],
+        email: [
+          { required: false, type: 'email', message: '请输入邮箱', trigger: 'blur' }
+        ]
+      },
+      contactForm: {
+        name: '',
+        position: '',
+        phone: '',
+        email: ''
+      },
+      dialogVisible: false
+    }
+  },
+  methods: {
+    toggle() { // 切换可见状态
+      this.dialogVisible = !this.dialogVisible
+      this.$nextTick(() => {
+        this.resetForm('contactForm')
+        console.log(this.sourceData)
+        if (this.sourceData) {
+          if (this.sourceData.is_bind == 1) {
+            this.onlyRead = true
+          } else {
+            this.onlyRead = false
+          }
+        }
+        this.sourceData = this.sourceData || {}
+        this.sourceData ? this.contactForm = { ...this.sourceData } : null
+      })
+    },
+    destory() {
+      this.$refs.contact.close()
+    },
+    submitForm(formName) { // 提交表单
+      this.$refs[formName].validate((valid) => {
+        if (!valid) {
+          return
+        }
+        this.addMode ? this.handleSubmit(this.contactForm) : null
+        this.editMode ? this.handleEdit(this.contactForm) : null
+        this.$refs.contact.close()
+      })
+    },
+    resetForm(formName) { // 重置表单
+      this.$refs[formName].resetFields()
+    }
+  },
+  computed: {
+    addMode() {
+      return this.type === 'add'
+    },
+    editMode() {
+      return this.type === 'edit'
+    },
+    dialogTitle() {
+      return this.addMode ? '添加联系人' : '编辑联系人'
+    }
+  }
+}
+</script>

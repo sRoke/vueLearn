@@ -1,0 +1,283 @@
+<template>
+  <div class="add_page">
+    <el-form :model="form"  ref="form" label-width="150px">
+       <el-form-item label="快讯标题:" :label-width="formLabelWidth" prop="title" :rules="[
+        { required: true, message: '标题不能为空'}]">
+      <el-input v-model="form.title" auto-complete="off"><i>0/20</i></el-input>
+      </el-form-item>
+      <el-form-item label="分类:" :label-width="formLabelWidth" prop="type">
+      <el-select v-model="form.type" placeholder="请选择"  :rules="[
+        { required: true, message: '分类不能为空'}]">
+        <el-option v-for="item in options" :label="item.label" :value="item.type">
+        </el-option>
+      </el-select>
+      </el-form-item>
+      <el-form-item label="Seo Title:" :label-width="formLabelWidth" prop="seo_title">
+        <el-input v-model="form.seo_title" auto-complete="off"></el-input>
+      </el-form-item>
+      <el-form-item label="Seo Keyword:" :label-width="formLabelWidth" prop="seo_keyword">
+        <el-input v-model="form.seo_keyword" auto-complete="off"></el-input>
+      </el-form-item>
+      <el-form-item label="Seo Description:" :label-width="formLabelWidth" prop="seo_description">
+        <el-input v-model="form.seo_description" auto-complete="off"></el-input>
+      </el-form-item>
+      <el-form-item label="封面:" :label-width="formLabelWidth" prop="img_url" :rules="[
+        { required: true, message: '封面不能为空'}]">
+        <!-- <el-upload
+        :action="uploadUrl"
+        type="drag"
+        :thumbnail-mode="true"
+        :on-preview="viewPic"
+        :on-remove="handleRemove"
+        :on-success="uploadSuccess"
+        :on-error="uploadFail"
+        :default-file-list="fileList" v-model.trim="form.img_url" class="hidd">
+          <i class="el-icon-upload"></i>
+          <div class="el-dragger__text">将文件拖到此处，或<em>点击上传</em></div>
+          <div class="el-upload__tip" slot="tip">只能上传jpg/png文件</div>
+        </el-upload> -->
+        <div class="ca_1">  
+          <div  class="v12">
+            <img :src="pic1"/>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess"
+            :on-remove="handleRemove"
+            :show-upload-list="false"
+            :show-file-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary">替换图片</el-button>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="资讯内容:" prop="content" :rules="[
+        { required: true, message: '咨询内容不能为空'}]">
+        <div id="div5"></div>
+      </el-form-item>
+      <el-form-item label="状态:"  prop="status">
+        <!-- <el-radio-group v-model="form.status"> -->
+          <el-radio label="2" class="radio" v-model="form.status">已上架</el-radio>
+          <el-radio label="3" class="radio" v-model="form.status">已下架</el-radio>
+        <!-- </el-radio-group> -->
+      </el-form-item>
+      <el-form-item label="排序" prop="sort" :label-width="formLabelWidth">
+        <el-input v-model="form.sort" placeholder="请输入0-1000的数字" class="input_mini"></el-input>
+      </el-form-item>
+      <el-form-item>
+        <el-button @click="watch()">预览</el-button>
+        <el-button type="primary" :disabled="disable" @click="add()" :loading="isLoading">保存</el-button>
+        <el-button type="primary" @click="cancle()">返回</el-button>
+      </el-form-item>
+    </el-form>
+    <newsWatch ref="newsWatch" :info="form"></newsWatch>
+  </div>
+</template>
+
+<script>
+import http from '../../../assets/js/http'
+import newsWatch from './news_watch.vue'
+import Wangeditor from 'wangEditor'
+export default{
+  props: ['info'],
+  methods: {
+    add() {
+      console.log(this.form)
+      this.form.content = this.editor.$txt.html()
+      var m = '<p><br></p><p><br></p>'
+      var n = '<p><br></p>'
+      if (this.form.content == m || this.form.content == n) {
+        this.form.content = ''
+      }
+      console.log(this.form.content)
+      this.$refs.form.validate((pass) => {
+        if (pass) {
+          this.isLoading = true
+          if (this.form.sort >= 0 && this.form.sort <= 1000) {
+            this.apiPut('news/', this.form.id, this.form).then((res) => {
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '编辑成功')
+                this.goback()
+              } else {
+                _g.dealError(this, res)
+                this.isLoading = !this.isLoading
+              }
+            })
+          } else {
+            _g.toastMsg(this, 'warning', '排序为0-1000的数字')
+            this.isLoading = !this.isLoading
+          }
+        }
+      })
+    },
+    cancle() {
+      this.goback()
+    },
+    goback() {
+      router.go(-1)
+    },
+    getData(id) {
+      this.form.id = id
+      console.log(this.form.id)
+      this.apiGet('news/' + this.form.id).then((res) => {
+        console.log(res.data)
+        this.form = res.data
+        console.log(this.editor.$txt.html())
+        this.editor.$txt.html('')
+        this.editor.$txt.append(this.form.content)
+        console.log(this.editor.$txt.html())
+        if (res.data.is_show) {
+          this.form.status = '2'
+        } else {
+          this.form.status = '3'
+        }
+        console.log(typeof (this.form.status))
+        let data = {
+          name: '图片',
+          url: window.imgUrl + res.data.img_url
+        }
+        let img = window.imgUrl + res.data.img_url
+        this.fileList.push({ name: '图片', url: img })
+        this.form.img_url = res.data.img_url
+        this.pic1 = img
+      })
+    },
+    uploadSuccess(res, file, fileList) {
+      // this.form.img_url = res.data
+      // let data = {
+      //   name: '图片',
+      //   url: window.imgUrl + res.data
+      // }
+      // if (this.fileList.length) {
+      //   this.fileList[0] = data
+      // } else {
+      //   this.fileList.push(data)
+      // }
+      this.form.img_url = res.data
+      this.pic1 = window.imgUrl + res.data
+      // console.log(this.pic1)
+      // console.log(this.form.img_url)
+    },
+    uploadFail(err, res, file) {
+      console.log('err = ', _g.j2s(err))
+      console.log('res = ', _g.j2s(res))
+    },
+    handleRemove(file, fileList) {
+      this.form.img_url = ''
+      this.fileList.splice(file)
+    },
+    viewPic() {
+      this.propsImg = this.fileList[0].url
+    },
+    watch() {
+      this.form = this.form
+      this.form.content = this.editor.$txt.html()
+      this.$refs.newsWatch.open(this.form)
+    }
+  },
+  data() {
+    return {
+      pic1: null,
+      disable: false,
+      options: [{
+        type: '1',
+        label: '经典案例'
+      }, {
+        type: '2',
+        label: '平台动态'
+      }, {
+        type: '3',
+        label: '活动咨询'
+      }, {
+        type: '4',
+        label: '行业资讯'
+      }],
+      label: '',
+      editor: null,
+      form: {
+        title: '',
+        // seo_title: '',
+        // seo_keyword: '',
+        type: '',
+        // img_url: '',
+        status: '',
+        content: '',
+        sort: ''
+      },
+      uploadUrl: '',
+      fileList: [],
+      propsImg: '',
+      rules: {
+        title: [
+          { required: true, message: '请输入标题', trigger: 'blur' }
+        ],
+        type: [
+          { type: true, message: '请选择分类', trigger: 'blur,change' }
+        ],
+        img_url: [
+        { required: true, message: '封面不能为空' }
+        ],
+        status: [
+          { required: true, message: '选择状态' }
+        ]
+      }
+    }
+  },
+  mounted(id) {
+    var yy = true
+    this.form.id = this.$route.params.id
+    console.log(this.form.id)
+    this.editor = new Wangeditor('div5')
+    this.editor.config.menus = [
+      'source',
+      '|',
+      'bold',
+      'underline',
+      'italic',
+      'strikethrough',
+      'eraser',
+      'forecolor',
+      'bgcolor',
+      '|',
+      'quote',
+      'fontfamily',
+      'fontsize',
+      'head',
+      'unorderlist',
+      'orderlist',
+      'alignleft',
+      'aligncenter',
+      'alignright',
+      '|',
+      'link',
+      'unlink',
+      'table',
+      'emotion',
+      '|',
+      'insertcode',
+      '|',
+      'img',
+      'video',
+      'undo',
+      'redo',
+      'lineheight'
+    ]
+    this.editor.config.uploadImgUrl = window.HOST + 'Wangeditor'
+    this.editor.config.uploadImgFns.onload = (resultText, xhr) => {
+      this.editor.command(null, 'insertHtml', '<img src=' + resultText + ' style="max-width:100%;"/>')
+    }
+    if (yy == true) {
+      this.editor.create()
+      yy == false
+    }
+    this.uploadUrl = window.HOST + 'Upload'
+    this.getData(this.form.id)
+  },
+  components: {
+    newsWatch
+  },
+  mixins: [http]
+}
+</script>

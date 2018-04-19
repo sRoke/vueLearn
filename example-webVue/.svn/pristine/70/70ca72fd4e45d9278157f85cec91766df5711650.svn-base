@@ -1,0 +1,986 @@
+<template>
+  <div id='serviceInfo1'>
+    <el-form :inline="true" :model="servicer_info" label-width="100px">
+      <div class='base-info-cont'>
+        <el-row>
+          <el-col class='base-title'>基本信息</el-col>
+        </el-row>
+        <el-row class='m-t-20'>
+          <el-col :span='8'>
+            <el-form-item label="编号：">
+              <div class='lineh-36'>{{servicer_info.num}}</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="公司名称：">
+              <el-input v-model="servicer_info.name" placeholder="请输入内容" :disabled='!service_edit'></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item class="uphead">
+              <el-upload
+                :before-upload="beforeAvatarUpload"
+                :action="uploadUrl"
+                :on-success="uploadSuccess"
+                :on-error="uploadFail"
+                :default-file-list="fileList" v-if="service_edit ">
+                <el-button type="text" size='mini'>
+                  <div cLass="w-40">
+                    <img :src="imgSrc" alt="head" cLass="w-100p">
+                  </div>
+                </el-button>
+              </el-upload>
+              <el-button type="text" size='mini' v-else>
+                  <div cLass="w-40">
+                    <img :src="imgSrc" alt="head" cLass="w-100p">
+                  </div>
+              </el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span='8'>
+            <el-form-item label="来源：">
+              <div class='lineh-36' v-if='servicer_info.source == 1'>注册</div>
+              <div class='lineh-36' v-else>系统添加</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="网站账号：">
+              <!-- <div class='lineh-36'>{{servicer_info.account}}</div> -->
+              <el-input v-model="servicer_info.account" placeholder="网站账号" :disabled='!service_edit'></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="密码：">
+              <el-input v-model="servicer_info.password" placeholder="请输入密码" :disabled='!service_edit'></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8">
+            <el-form-item label="银行卡号">
+              <el-input v-model="servicer_info.bank_account" :disabled="!service_edit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="银行卡开户行">
+              <el-input v-model="servicer_info.bank_name" :disabled="!service_edit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="银行卡户名">
+              <el-input v-model="servicer_info.bank_user" :disabled="!service_edit"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row class='m-t-20'>
+          <el-col :span='8'>
+            <el-form-item label="公司电话：">
+              <el-input v-model="servicer_info.phone" :disabled='!service_edit' placeholder="请输入电话"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="公司规模：">
+              <el-input v-model="servicer_info.size" :disabled='!service_edit' placeholder="请输入规模"></el-input>
+            </el-form-item>
+          </el-col>
+          <!-- <el-col :span='7'>
+            <el-form-item label="所在地：">
+              <el-row type='flex' justify='start'>
+                <div class='m-r-15'>
+                  <el-select v-model="proValue" :disabled='!service_edit' placeholder="请选择省份">
+                    <el-option
+                      v-for="item in proOptions"
+                      :label="item.label"
+                      :value="item.label">
+                    </el-option>
+                  </el-select>
+                </div>
+                <div>
+                    <el-select v-model="servicer_info.city" :disabled='!service_edit' placeholder="请选择城市">
+                    <el-option
+                      v-for="item in cityOptions"
+                      :label="item.label"
+                      :value="item.label">
+                    </el-option>
+                    </el-select>
+                </div>
+              </el-row>
+            </el-form-item>
+          </el-col> -->
+        </el-row>
+
+        <el-row class='m-t-20'>
+          <el-col :span='16'>
+            <el-form-item label="公司地址：">
+              <el-row type='flex' justify='start'>
+                <div>
+                  <el-cascader
+                    :options="proCityList"
+                    v-model="proCityVal"
+                    @change="handleChangeCity" v-if="service_edit">
+                  </el-cascader>
+                  <el-input v-model="proCityVal1" :disabled="true" v-else></el-input>
+                </div>
+                <div>
+                  <el-input class='m-l-15' v-model="servicer_info.address" placeholder="请输入详细地址" v-if="service_edit"></el-input>
+                  <el-input class='m-l-15' v-model="servicer_info.address" :disabled="true" v-else></el-input>
+                </div>
+              </el-row>
+            </el-form-item>
+          </el-col>
+          <!-- <el-col :span="8">
+            <el-form-item label="帐号：" prop='account'>
+              <el-input v-model="servicer_info.account" placeholder="请输入手机号"></el-input>
+            </el-form-item>
+          </el-col> -->
+        </el-row>
+
+        <el-row>
+          <el-col :span='16'>
+            <el-form-item label="公司简介："  class='desp'>
+              <el-input
+                type="textarea"
+                :disabled='!service_edit'
+                placeholder="请输入内容"
+                v-model="servicer_info.remark"
+                class='textA'>
+              </el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="标签：">
+              <div class='tag mar-t-8 in-block'>{{selectTagStr}}</div>
+              <el-button v-if='service_edit' type="text" size="mini" @click='openTag()' class='m-l-5'>选择标签</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span='6'>
+            <el-form-item label="成立日期：">
+              <el-date-picker
+                v-model="servicer_info.register_time"
+                type="date"
+                :disabled='!service_edit'
+                @change="getRegisterTime"
+                placeholder="选择日期">
+            </el-date-picker>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="法人：">
+              <el-input  :disabled='!service_edit' v-model="servicer_info.legal" placeholder="请输入内容"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="近三年营业额：" class='turnover'>
+              <el-input :disabled='!service_edit' v-model="servicer_info.turnover" placeholder="请输入内容"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="项目数：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.project_num" placeholder="请输入内容"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span='6'>
+            <el-form-item label="负责人：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.boss.name" placeholder="请输入名字"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="性别：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.boss.sex" placeholder="请输入性别"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="学历：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.boss.education" placeholder="请输入学历"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="出生日期：">
+              <el-date-picker
+                v-model="servicer_info.boss.both"
+                @change='getBossBirth'
+                :disabled='!service_edit'
+                type="date"
+                placeholder="选择日期">
+            </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span='6'>
+            <el-form-item label="技术总监：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.director.name" placeholder="请输入名字"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="性别：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.director.sex" placeholder="请输入性别"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="学历：">
+              <el-input :disabled='!service_edit' v-model="servicer_info.director.education" placeholder="请输入学历"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span='6'>
+            <el-form-item label="出生日期：">
+              <el-date-picker
+                v-model="servicer_info.director.both"
+                @change='getMangBirth'
+                :disabled='!service_edit'
+                type="date"
+                placeholder="选择日期">
+            </el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row type='flex' justify='start' align='bottom' class='m-b-10'>
+          <el-col :span='18'>
+            <el-table
+              :data="servicer_info.demandServiceContacts"
+              border
+              style="width: 100%">
+              <el-table-column
+                label="联系人">
+                <template scope="scope">
+                  <el-input v-model="scope.row.name" placeholder="请输入联系人" :disabled='!service_edit'></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="职位"
+                width="180">
+                <template scope="scope">
+                  <el-input v-model="scope.row.position" placeholder="请输入职位" :disabled='!service_edit'></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="手机号"
+                width="180">
+                <template scope="scope">
+                  <el-input v-model="scope.row.phone" :disabled='!service_edit' placeholder="请输入手机号" v-on:blur="checkAccount()"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="邮箱"
+                width="180">
+                <template scope="scope">
+                  <el-input v-model="scope.row.email" :disabled='!service_edit' placeholder="请输入邮箱"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column 
+                label="操作"
+                v-if='service_edit'
+                width="120">
+                  <template scope="scope">
+                    <span>
+                      <el-button
+                      size="small"
+                      type="danger"
+                      v-show="servicer_info.demandServiceContacts.length > 1 && scope.$index > 0"
+                      @click="detele_linker(scope.$index)">
+                      <i class="el-icon-delete"></i>
+                      </el-button>
+                    </span>
+                  </template>
+                </el-table-column>
+            </el-table>
+          </el-col>
+          <el-col :span='2' v-if='service_edit'>
+            <el-button type="text" size="mini" @click='addLinker()' class='m-l-5'>添加新联系人</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <div class='base-info-cont'>
+        <el-row>
+          <el-col class='base-title'>资料情况</el-col>
+        </el-row>
+       
+        <el-row type='flex' justify='start' align='bottom' class='m-t-10'>
+          <el-col :span='21'>
+            <el-button size="small" v-if='service_edit' type="primary" class='m-b-10 m-l-10' @click='openData()'>添加</el-button>
+            <el-table
+              :data="servicer_info.dataRecord"
+              border
+              style="width: 100%">
+              <el-table-column
+                label="上传人"
+                width="180">
+                <template scope="scope">
+                  <div class='lineh-36'>{{scope.row.name}}</div>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="证件名"
+                width="180">
+                <template scope="scope">
+                  <a :href="scope.row.showPath" download="scope.row.type" style='color: #1f2d3d' class="lineh-36 underline">{{scope.row.type}}</a>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="introduction"
+                label="说明">
+              </el-table-column>
+              <el-table-column
+                label="上传时间"
+                width="180">
+                <template scope="scope">
+                  <div class='lineh-36'>{{scope.row.create_time}}</div>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="备注">
+                <template scope="scope">
+                  <el-input :disabled='!service_edit' v-model="scope.row.remark" placeholder="请输入备注"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column 
+                label="操作"
+                v-if='service_edit'
+                width="120">
+                  <template scope="scope">
+                    <span>
+                      <el-button
+                      size="small"
+                      type="danger"
+                      @click="detele_dataRecord(scope.$index)">
+                      <i class="el-icon-delete"></i>
+                      </el-button>
+                    </span>
+                  </template>
+                </el-table-column>
+            </el-table>
+          </el-col>
+        </el-row>
+
+        <el-row class='m-t-10'>
+          <el-col :span='4' class='m-r-15' v-if='service_edit'>
+            <el-form-item label="公司认证：">
+              <el-checkbox v-model="isCofirm" >已认证</el-checkbox>
+            </el-form-item>
+          </el-col>
+          <el-col :span='15'>
+            <el-form-item label="公司荣誉：">
+              <el-row type='flex' justify='start'>
+                <div v-for='item in servicer_info.medal'>
+                    <div class='himg'>
+                      <img class="honor-img" :src='item.path'/>
+                    </div>
+                    <div v-text='item.name' class='htitle'></div>
+                </div>
+                <el-button v-if='service_edit' type="text" size="mini" class='m-t-73 m-l-10' @click="selectHonor">选择</el-button>
+              </el-row>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </div>
+
+      <!-- <div class='base-info-cont'>
+        <el-row>
+          <el-col class='base-title'>跟进情况</el-col>
+        </el-row>
+
+        <el-row class='m-t-10'>
+          <el-col :span='24'>
+            <el-form-item label="跟进说明：" v-if='service_edit'>
+              <el-row type='flex' justify='start'>
+                <el-input 
+                class=" w-300"
+                :rows="6"
+                type="textarea"
+                v-model="followStr"></el-input>
+                <el-col :span="2" class="add-content">
+                  <el-button type="text" size="mini" class='follow-btn' @click.prevent="addFollow" v-if="!isEdit">添加</el-button>
+                </el-col>
+              </el-row> 
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row class='m-b-10'>
+          <el-col :span='20'>
+            <el-table
+              border
+              :data="servicer_info.followRecord"
+               max-height="300">
+              <el-table-column
+                prop="content"
+                label="跟进记录">
+              </el-table-column>
+              <el-table-column
+                prop="create_time"
+                label="添加时间"
+                width="200">
+              </el-table-column>
+              <el-table-column
+                prop="name"
+                label="说明人"
+                width="180">
+              </el-table-column>
+              <el-table-column 
+                label="操作"
+                v-if='service_edit'
+                width="120">
+                  <template scope="scope">
+                    <span>
+                      <el-button
+                      size="small"
+                      type="danger"
+                      @click="detele_follow(scope.$index)">
+                      <i class="el-icon-delete"></i>
+                      </el-button>
+                    </span>
+                  </template>
+                </el-table-column>
+            </el-table>
+          </el-col>
+        </el-row>
+      </div> -->
+      <el-row class='fr m-t-20' v-if='service_edit'>
+        <el-button type="primary" @click="goback()">取消</el-button>
+        <el-button type="primary" @click="save" :loading="isLoading">保存</el-button>
+      </el-row>
+    </el-form>
+    <upload ref='upload' title='添加资料'></upload>
+    <honorPage ref='honorPage' :info='servicer_info.medal'></honorPage>
+    <selectTag ref='selectTag' :info='servicer_info.tag' title='选择关联标签'></selectTag>
+  </div>
+</template>
+<style type="text/css">
+  #serviceInfo1 .in-block{
+    display: inline-block;
+  }
+  #serviceInfo1 .tag{
+    line-height: 20px !important
+  }
+  #serviceInfo1 .wid .el-form-item__label{
+    /*width: 115px !important;*/
+  }
+  #serviceInfo1 .wid .el-form-item__content{
+    margin-left: 100px !important;
+  }
+  #serviceInfo1 .el-form--inline .el-form-item{
+    display: block;
+    margin-right: 30px;
+  }
+  #serviceInfo1 .tag-list{
+    margin-left: -30px
+  }
+  #serviceInfo1 .mar-t-8{
+    margin-top: 8px !important
+  }
+  #serviceInfo1 .tag-list li{
+    float: left;
+    font-size: 14px;
+    margin-left: 5px;
+  }
+  #serviceInfo1 .himg{
+    width: 90px;
+  }
+  #serviceInfo1 .m-t-73{
+    margin-top: 73px;
+  }
+  #serviceInfo1 .m-t-100{
+    margin-top: 100px;
+  }
+  #serviceInfo1 .himg img{ 
+    margin-left: 15px;
+  }
+  #serviceInfo1 .htitle{
+    line-height: 18px;
+    font-size: 12px;
+    text-align: center;  
+    width: 90px;
+  }
+  #serviceInfo1 .honor-img{
+    width: 60px;
+    height: 60px;
+  }
+  #serviceInfo1 .big-title{
+    padding: 5px 0px;
+    text-align: left;
+    text-indent: 10px;
+    background: #66CCFF;
+  }
+  #serviceInfo1 .base-info-cont{
+    border:1px solid #BFCBD9; 
+    border-radius:3px; 
+    margin-bottom:10px;
+  }
+  #serviceInfo1 .base-title{
+    padding: 5px 0px;
+    text-align: left;
+    text-indent: 10px;
+    border-bottom: 1px solid #BFCBD9;
+  }
+  #serviceInfo1 .stitle{
+    width: 150px;
+    line-height: 36px;
+    text-align: right;
+  }
+  #serviceInfo1 .stitle-110{
+    width: 110px;
+    line-height: 36px;
+    text-align: right;
+  }
+  #serviceInfo1 .ltitle{
+    width: 190px;
+    line-height: 36px;
+    text-align: right;
+  }
+  #serviceInfo1 .lineh-36{
+    line-height: 36px;
+  }
+  #serviceInfo1 .underline{
+    text-decoration: underline;
+  }
+  #serviceInfo1 .mart-10{
+    margin-top: 10px;
+  }
+  #serviceInfo1 .follow-add{
+    margin-top: 90px;
+    margin-left: 10px;
+  }
+  #serviceInfo1 .turnover .el-form-item__label{
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+  #serviceInfo1 .follow-btn{
+    margin-top: 121px;
+    margin-left: 10px;
+  }
+</style>
+<script>
+  import address from '../../../assets/js/city-data.json'
+  import honorList from '../../../assets/js/honorList'
+  import selectTag from './selectTag.vue'
+  import honorPage from './honorList.vue'
+  import upload from './upload.vue'
+  import http from '../../../assets/js/http'
+  import Vue from 'vue'
+  export default {
+    data() {
+      return {
+        isLoading: false,
+        service_edit: false,
+        head: require('../../../assets/images/head.png'),
+        h1: require('../../../assets/images/honor_icon/h1.png'),
+        h2: require('../../../assets/images/honor_icon/h2.png'),
+        h3: require('../../../assets/images/honor_icon/h3.png'),
+        h4: require('../../../assets/images/honor_icon/h4.png'),
+        h5: require('../../../assets/images/honor_icon/h5.png'),
+        h6: require('../../../assets/images/honor_icon/h6.png'),
+        h7: require('../../../assets/images/honor_icon/h7.png'),
+        h8: require('../../../assets/images/honor_icon/h8.png'),
+        proCityList: address,
+        proCityVal: [],
+        proCityVal1: [],
+        selectTagStr: '',
+        followStr: '',
+        isFirst: true,
+        isCofirm: false,
+        backup_tag: [],
+        create_time: {
+          disabledDate(time) {
+            return time.getTime() < Date.now() - 8.64e7
+          }
+        },
+        del_dataRecordId: [],  // 删除资料情况id数组
+        del_contact_list: [],  // 删除联系人id数组
+        del_follow_record: [],  // 删除跟进记录id数组
+        servicer_info: {
+          province: '',
+          area: '',
+          address: '',
+          city: '',
+          boss: {
+            name: '',
+            education: '',
+            sex: '',
+            both: ''
+          },
+          director: {
+            name: '',
+            education: '',
+            sex: '',
+            both: ''
+          },
+          dataRecord: []
+        },
+        follow_content: '', // 填写的跟进记录内容
+        uploadUrl: '',
+        fileList: [],
+        logo: '',
+        imgSrc: '',
+        list_path: ''
+      }
+    },
+    props: ['id'],
+    watch: {
+      // proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+      //   var that = this
+      //   that.cityOptions = address['city'][val]
+      //   that.servicer_info.province = val
+      //   if (!this.isFirst) {
+      //     that.servicer_info.city = ''
+      //   } else {
+      //     this.isFirst = false
+      //   }
+      // }
+    },
+    methods: {
+      beforeAvatarUpload(file) {
+        var self = this
+        if (!self.service_edit) {
+          _g.toastMsg(self, 'warning', '您没有上传头像的权限！')
+        }
+        return self.service_edit
+      },
+      uploadFail(err, res, file) {
+        _g.toastMsg(this, 'warning', '上传失败！')
+        console.log('err = ', _g.j2s(err))
+        console.log('res = ', _g.j2s(res))
+      },
+      handleChangeCity(val) {
+        this.servicer_info.province = val[0]
+        this.servicer_info.city = val[1]
+        this.servicer_info.area = val[2]
+      },
+      uploadSuccess(res, file, fileList) {
+        if (fileList.length == 2) {
+          fileList.shift()
+        }
+        this.fileList = fileList
+        this.imgSrc = imgUrl + this.fileList[0].response.data
+        // alert(this.imgSrc)
+        _g.toastMsg(this, 'success', '上传成功！')
+        console.log('this.fileList = ', _g.j2s(this.fileList))
+        console.log('res = ', _g.j2s(res))
+      },
+      getAccount() {
+        // var self = this
+        // if (!(/^1[34578]\d{9}$/.test(self.servicer_info.account))) {
+        //   _g.toastMsg(self, 'warning', '请填写有效手机号码作为网站帐号！')
+        //   return false
+        // } else {
+        //   return true
+        // }
+        return true
+      },
+      updateTag(newTag) {
+        let nameArr = []
+        _(newTag).forEach((res, key) => {
+          nameArr.push(res.label_name)
+        })
+        this.selectTagStr = nameArr.join('、')
+        Vue.set(this.servicer_info, 'tag', newTag)
+      },
+      updateHonor(newHonor) {
+        Vue.set(this.servicer_info, 'medal', newHonor)
+      },
+      openData() {
+        this.$refs.upload.open()
+      },
+      openTag() {
+        console.log(this.$refs)
+        this.$refs.selectTag.open()
+      },
+      detele_dataRecord(index) {
+        this.$confirm('是否删除该资料?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          if (this.servicer_info.dataRecord[index]['id']) {
+            this.del_dataRecordId.push(this.servicer_info.dataRecord[index]['id'])
+          }
+          this.servicer_info.dataRecord.splice(index, 1)
+          _g.toastMsg(this, 'success', '删除成功')
+        }).catch(() => {
+          _g.toastMsg(this, 'info', '已取消删除')
+        })
+      },
+      addLinker() {
+        this.servicer_info.demandServiceContacts.push({ 'name': '', 'phone': '', 'position': '', 'email': '', 'type': 'add' })
+      },
+      getRegisterTime(time) {
+        this.servicer_info.register_time = time
+      },
+      getBossBirth(time) {
+        this.servicer_info.boss.both = time
+      },
+      getMangBirth(time) {
+        this.servicer_info.director.both = time
+      },
+      detele_linker(index) {
+        this.$confirm('是否删除该联系人?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          if (this.servicer_info.demandServiceContacts[index]['id']) {
+            this.del_contact_list.push(this.servicer_info.demandServiceContacts[index]['id'])
+          }
+          this.servicer_info.demandServiceContacts.splice(index, 1)
+          _g.toastMsg(this, 'success', '删除成功')
+        }).catch(() => {
+          _g.toastMsg(this, 'info', '已取消删除')
+        })
+      },
+      detele_follow(index) {
+        this.$confirm('是否删除该跟进记录?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          if (this.servicer_info.followRecord[index]['id']) {
+            this.del_follow_record.push(this.servicer_info.followRecord[index]['id'])
+          }
+          this.servicer_info.followRecord.splice(index, 1)
+          _g.toastMsg(this, 'success', '删除成功')
+        }).catch(() => {
+          _g.toastMsg(this, 'info', '已取消删除')
+        })
+      },
+      goback() {
+        router.push({ path: this.list_path })
+      },
+      selectTag() { // 选择标签
+        this.$refs.selectTag.open()
+      },
+      selectHonor() { // 选择标签
+        this.$refs.honorPage.open()
+      },
+      addData(form) { // 添加资料情况
+        this.servicer_info.dataRecord.push({
+          name: Lockr.get('userInfo').u_realname,
+          type: form.name,
+          create_time: _g.getDatetime(),
+          remark: form.desc,
+          path: form.fileList[0].response.data,
+          showPath: imgUrl + form.fileList[0].response.data
+        })
+      },
+      addFollow() { // 添加跟进记录
+        if (this.followStr == '') {
+          _g.toastMsg(this, 'warning', '请填写跟进说明！')
+        } else {
+          this.servicer_info.followRecord.push({
+            name: Lockr.get('userInfo').u_realname,
+            create_time: _g.getDatetime(),
+            content: this.followStr,
+            type: 'add'
+          })
+          this.followStr = ''
+        }
+      },
+      save() {
+        this.isLoading = true
+        // 判断联系人列表是否有全空数据
+        // var isContinued = true
+        // if (this.servicer_info.demandServiceContacts.length == 0) {
+        //   _g.toastMsg(this, 'warning', '请添加联系人数据！')
+        //   return
+        // }
+        // _(this.servicer_info.demandServiceContacts).forEach((res, key) => {
+        //   if (res.name == '' && res.position == '' && res.phone == '' && res.email == '') {
+        //     isContinued = false
+        //     _g.toastMsg(this, 'warning', '联系人数据不能全为空，请填写或删除！')
+        //     return
+        //   }
+        // })
+        // if (!isContinued) {
+        //   return false
+        // }
+        if (!this.getAccount()) {
+          this.isLoading = !this.isLoading
+          return
+        }
+        let saveData = {}
+        saveData.auth = this.isCofirm == true ? 1 : 0
+        saveData.city = this.servicer_info.city
+        saveData.province = this.servicer_info.province
+        saveData.area = this.servicer_info.area
+        saveData.address = this.servicer_info.address
+        saveData.dataRecord = []
+        _(this.servicer_info.dataRecord).forEach((res, key) => {
+          if (res.id) {
+            saveData.dataRecord.push({ 'remark': res.remark, 'create_time': res.create_time, 'path': res.path, 'type': res.type, 'id': res.id })
+          } else {
+            saveData.dataRecord.push({ 'remark': res.remark, 'create_time': res.create_time, 'path': res.path, 'type': res.type })
+          }
+        })
+
+        saveData.del_data_situation = this.del_dataRecordId
+
+        saveData.demandServiceContacts = []
+        _(this.servicer_info.demandServiceContacts).forEach((res, key) => {
+          if (res.id) {
+            saveData.demandServiceContacts.push({ 'email': res.email, 'name': res.name, 'phone': res.phone, position: res.position, 'id': res.id })
+          } else {
+            saveData.demandServiceContacts.push({ 'email': res.email, 'name': res.name, 'phone': res.phone, position: res.position })
+          }
+        })
+        saveData.del_contact_list = this.del_contact_list
+
+        saveData.followRecord = []
+        _(this.servicer_info.followRecord).forEach((res, key) => {
+          // console.log('test:' + JSON.stringify(res))
+          if (res.type == 'add') {
+            saveData.followRecord.push({ 'content': res.content, 'create_time': res.create_time, 'name': res.name })
+          }
+        })
+        saveData.del_follow_record = this.del_follow_record
+
+        saveData.id = this.servicer_info.id
+        saveData.legal = this.servicer_info.legal || ''
+
+        saveData.medal = ''
+        if (this.servicer_info.medal && this.servicer_info.medal.length > 0) {
+          let medal = []
+          _(this.servicer_info.medal).forEach((res, key) => {
+            medal.push(res.val)
+          })
+          saveData.medal = medal.join(',')
+        }
+        saveData.member = {
+          boss: this.servicer_info.boss,
+          director: this.servicer_info.director
+        }
+        if (this.fileList.length) {
+          saveData.logo = this.fileList[0].response.data
+        } else {
+          saveData.logo = 0
+        }
+        saveData.name = this.servicer_info.name
+        saveData.password = this.servicer_info.password
+        saveData.bank_user = this.servicer_info.bank_user
+        saveData.bank_name = this.servicer_info.bank_name
+        saveData.bank_account = this.servicer_info.bank_account
+        saveData.phone = this.servicer_info.phone
+        saveData.account = this.servicer_info.account
+        saveData.project_num = this.servicer_info.project_num || ''
+        saveData.register_time = this.servicer_info.register_time
+        saveData.remark = this.servicer_info.remark
+        saveData.size = this.servicer_info.size
+        saveData.tag = []
+        if (this.servicer_info.tag && this.servicer_info.tag.length > 0) {
+          _(this.servicer_info.tag).forEach((res, key) => {
+            saveData.tag.push(res.id)
+          })
+        }
+        saveData.turnover = this.servicer_info.turnover || ''
+        // console.log(JSON.stringify(saveData))
+        this.apiPost('service_user', saveData).then((res) => {
+          if (res.code == 200) {
+            // console.log(res)
+            _g.toastMsg(this, 'success', '保存成功')
+            setTimeout(() => {
+              this.isLoading = !this.isLoading
+              this.goback()
+            }, 1500)
+          } else {
+            _g.dealError(this, res)
+            this.isLoading = !this.isLoading
+          }
+        })
+      }
+    },
+    created() {
+      if (this.$route.params.path) {
+        Lockr.set('serviceListRoute', this.$route.params.path)
+      }
+      this.list_path = Lockr.get('serviceListRoute')
+      if (Lockr.get('authList')) {
+        if (Lockr.get('authList')['service_edit']) {
+          this.service_edit = true
+        }
+      } else {
+        this.service_edit = true
+      }
+      this.uploadUrl = window.HOST + 'Upload/data'
+      this.apiGet('service_user/' + this.id).then((res) => {
+        if (res.code == 200) {
+          if (!res.data.boss) {
+            res.data.boss = this.servicer_info.boss
+          }
+          if (!res.data.director) {
+            res.data.director = this.servicer_info.director
+          }
+          this.logo = res.data.logo
+          if (this.logo == 0) {
+            this.imgSrc = this.head
+          } else {
+            this.imgSrc = imgUrl + this.logo
+          }
+          this.servicer_info = res.data
+          this.backup_tag = this.servicer_info.tag
+          // 处理标签
+          let tagList = []
+          if (this.servicer_info.tag && this.servicer_info.tag.length > 0) {
+            _(this.servicer_info.tag).forEach((res, key) => {
+              tagList.push(res.label_name)
+            })
+          }
+          this.selectTagStr = tagList.join('、')
+          // 公司认证
+          this.isCofirm = false
+          if (res.data.auth == 1) {
+            this.isCofirm = true
+          }
+          // 处理省份城市
+          this.servicer_info.province = res.data.province || ''
+          this.servicer_info.city = res.data.city || ''
+          this.servicer_info.area = res.data.area || ''
+          this.servicer_info.address = res.data.address || ''
+          this.proCityVal = [this.servicer_info.province, this.servicer_info.city, this.servicer_info.area]
+          // this.proCityVal1 = [this.servicer_info.province + '/' + this.servicer_info.city + '/' + this.servicer_info.area]
+          if (this.servicer_info.province) {
+            this.proCityVal1 = [this.servicer_info.province + '/' + this.servicer_info.city + '/' + this.servicer_info.area]
+          } else {
+            this.proCityVal1 = []
+          }
+          // 处理勋章显示
+          if (this.servicer_info.medal && this.servicer_info.medal.length > 0) {
+            _(this.servicer_info.medal).forEach((res, key) => {
+              if (res != null) {
+                res.path = this['h' + res.id]
+                let index = _.findIndex(honorList, {
+                  tag: 'h' + res.id
+                })
+                res.val = honorList[index]['val']
+              }
+            })
+          }
+          // 处理资料情况
+          if (this.servicer_info.dataRecord && this.servicer_info.dataRecord.length > 0) {
+            _(this.servicer_info.dataRecord).forEach((res, key) => {
+              res.showPath = imgUrl + res.path
+            })
+          }
+          // 处理需求记录和订单记录的条数
+          this.$parent.$parent.$parent.getMatch(this.servicer_info.match)
+          this.$parent.$parent.$parent.getOrder(this.servicer_info.order)
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    components: {
+      selectTag,
+      honorPage,
+      upload
+    },
+    mixins: [http]
+  }
+</script>

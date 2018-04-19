@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><head><meta charset=utf-8><link href=http://dev1483006858.honghaiweb.com/favicon.ico type=image/x-icon rel="shortcut icon"><title>来设计</title><link href=/static/css/app.0b473100e9f5c244b50bdd9b59c3c10c.css rel=stylesheet></head><body><div id=app></div><script type=text/javascript>var isIE;
+    var userAgent = navigator.userAgent
+    var rMsie = /(msie\s|trident.*rv:)([\w.]+)/
+    var ua = userAgent.toLowerCase()
+    var match = rMsie.exec(ua)
+    if (match != null) {
+      isIE = { browser: 'IE', version: parseInt(match[2]) || '0'}
+    } else {
+      isIE = false
+    }
+    if (isIE.version < 10){
+      alert('不支持IE9及低于IE9的版本，如果您使用的是360或搜狗或猎豹浏览器，请使用极速模式，否则请升级版本或者使用chrome浏览器')
+    }</script><script type=text/javascript src=/static/js/manifest.4d1e1dfd417ca7f61c91.js></script><script type=text/javascript src=/static/js/vendor.9298c1a541e47cc16d77.js></script><script type=text/javascript src=/static/js/app.3d9a8f6f9da8903ad776.js></script></body></html>

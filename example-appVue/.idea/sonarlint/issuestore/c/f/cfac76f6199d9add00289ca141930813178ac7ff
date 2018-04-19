@@ -1,0 +1,10 @@
+
+]javascript:UnusedVariable"5Remove the declaration of the unused 'self' variable.(‚Ì¡‘üÿÿÿÿ
+Zjavascript:UnusedVariable"2Remove the declaration of the unused 'x' variable.(‹Îð÷úÿÿÿÿ
+]javascript:UnusedVariable"5Remove the declaration of the unused 'that' variable.(÷ã‡±þÿÿÿÿ
+Vjavascript:S1854"7Remove this useless assignment to local variable "that"(÷ã‡±þÿÿÿÿ
+Mjavascript:EmptyBlock")Either remove or fill this block of code.(½üÇáùÿÿÿÿ
+Vjavascript:S1854"7Remove this useless assignment to local variable "that"(÷ã‡±þÿÿÿÿ
+Vjavascript:S1854"7Remove this useless assignment to local variable "self"(‚Ì¡‘üÿÿÿÿ
+]javascript:UnusedVariable"5Remove the declaration of the unused 'that' variable.(÷ã‡±þÿÿÿÿ
+l javascript:DuplicatePropertyName"=Rename or remove duplicate property name 'checksalesmanList'.(ñ”µàýÿÿÿÿ

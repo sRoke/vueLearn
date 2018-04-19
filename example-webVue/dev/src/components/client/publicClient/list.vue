@@ -1,0 +1,695 @@
+<template>
+  <div>
+    <staff ref="staff"
+           v-if="showDialog"
+           :followPeople="followPeoples"
+           :clients="selList"
+           :callback="batchCallback"></staff>
+    <div id="customerList"
+         element-loading-text="正在加载中"
+         v-loading.fullscreen.lock="fullscreenLoading">
+      <div class="m-b-20 ovf-hd">
+        <div class="fr m-l-10"
+             v-if="canAdd">
+          <el-dropdown trigger="click"
+                       class="dropdown-container">
+  
+            <el-button class="btn-link-large add-btn"
+                       icon="more"></el-button>
+  
+            <el-dropdown-menu slot="dropdown">
+  
+              <el-dropdown-item style="color: #189BD9;"
+                                class="dropdown-menu">
+  
+                <el-upload :action="uploadLink"
+                           :on-success="uploadSuccess"
+                           :on-error="uploadFail"
+                           :before-upload="loadFile"
+                           class="fl w-80">导入数据
+                </el-upload>
+  
+                <a style="color: #189BD9"
+                   class="m-l-20 up-and-down"
+                   @click="download">下载模板</a>
+  
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+          <failRes ref="failRes"
+                   :errorData="errorData"></failRes>
+        </div>
+        <div class="fl">
+          <router-link class="btn-link-large add-btn"
+                       v-if="canAdd"
+                       :to="{ name: 'publicClientAdd', query: { type: this.$route.name === 'publicClientDemandList' ? 'demand' : 'service' } }">
+            添加
+          </router-link>
+          <a class="btn-link-large edit-btn"
+             v-if="canBatchFollow"
+             @click='sureAssign'>批量分配</a>
+          <a class="btn-link-large del-btn"
+             v-if="canEdit"
+             @click='sureDel'>删除</a>
+          <a v-if="canEdit"
+             @click="sureUnRelative"
+             class="btn-link-large warn-btn">取消关联</a>
+        </div>
+        <reset-btn class="fr m-l-10"
+                   :reset="handleClearFilter"></reset-btn>
+        <div class="fr w-250"
+             v-if="canView">
+          <el-input placeholder="请输入公司、联系人、手机号"
+                    v-model="keywords">
+            <el-button slot="append"
+                       icon="search"
+                       @click.prevent="select()"></el-button>
+          </el-input>
+        </div>
+        <div class="fr m-l-10 publicClient"
+             v-if="canView">
+          <el-select v-model="proValue"
+                     placeholder="请输入省">
+            <el-option v-for="item in proOptions"
+                       :label="item.label"
+                       :value="item.label">
+            </el-option>
+          </el-select>
+          <el-select v-model="cityValue"
+                     placeholder="请输入市"
+                     class="m-l-10"
+                     @change="select()">
+            <el-option v-for="item in cityOptions"
+                       :label="item.label"
+                       :value="item.label">
+            </el-option>
+          </el-select>
+        </div>
+        <div class="fr w-150">
+          <el-select v-model="sturdyMan"
+                     filterable
+                     placeholder="请选择跟进人员"
+                     @change="select()">
+            <el-option v-for="item in sturdyMen"
+                       :label="item.name"
+                       :value="item.id">
+            </el-option>
+          </el-select>
+        </div>
+      </div>
+      <el-table :data="tableData"
+                style="width: 100%;"
+                row-class-name="tx-c"
+                @filter-change="applyFilter"
+                @selection-change="handleSelectionChange"
+                v-if="canView && loadingDone">
+        <el-table-column width="35"
+                         type="selection"
+                         :selectable='isSelect'></el-table-column>
+        <el-table-column prop="num"
+                         width="150"
+                         label="编号"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="公司名称"
+                         min-width="135"
+                         prop="name"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="联系人"
+                         width="115"
+                         v-if="canEdit"
+                         prop="p_contact"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="手机号"
+                         width="130"
+                         v-if="canEdit"
+                         prop="p_phone"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="省市"
+                         width="130"
+                         prop="city"
+                         header-align="center">
+          <template scope="scope">{{ `${scope.row.province}${scope.row.city}` }}</template>
+        </el-table-column>
+        <el-table-column label="营业品类"
+                         width="100"
+                         prop="category"
+                         :filter-multiple="false"
+                         :filters="categoryOptions"
+                         column-key="category"
+                         v-if="demandOrService === 2"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="跟进人员"
+                         min-width="125"
+                         prop="p_name"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="跟进状态"
+                         width="125"
+                         prop="followStatus"
+                         :filter-multiple="false"
+                         :filters="followStatus"
+                         column-key="followStatus"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="客户级别"
+                         width="120"
+                         prop="p_ranking"
+                         :filter-multiple="false"
+                         :filters="levelOptions"
+                         column-key="p_ranking"
+                         v-if="demandOrService === 1"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column width="120"
+                         prop="register"
+                         label="是否注册"
+                         column-key="register"
+                         :filter-multiple="false"
+                         :filters="registerOption"
+                         header-align="center">
+          <template scope="scope">{{ scope.row.dsu_id ? '是' : '否' }}</template>
+        </el-table-column>
+        <el-table-column label="最新跟进时间"
+                         width="150"
+                         prop="follow_time"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column inline-template
+                         label="操作"
+                         :width="setOprWidth"
+                         header-align="center">
+          <div>
+            <router-link :to="{ name: 'publicClientDetail', params: { id: row.id, path }, query: queryParams }"
+                         class="btn-link edit-btn">查看
+            </router-link>
+            <router-link v-if="canEdit"
+                         :to="{ name: 'publicClientEdit', params: { id: row.id, path }, query: queryParams }"
+                         class="btn-link edit-btn">编辑
+            </router-link>
+          </div>
+        </el-table-column>
+      </el-table>
+  
+      <div class="pos-rel p-t-20"
+           v-show="showPagination"
+           v-if="canView">
+        <div class="block pages m-b-10">
+          <el-pagination @size-change="handleSizeChange"
+                         @current-change="handleCurrentChange"
+                         :page-size="pageSize"
+                         :current-page="currentPage"
+                         :total="dataCount"
+                         :page-sizes="[15, 30, 50, 100]"
+                         layout="total, sizes, prev, pager, next, jumper">
+          </el-pagination>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<style scoped>
+.el-dropdown-menu__item:not(.is-disabled):hover {
+  background-color: transparent;
+}
+
+#customerList .el-tag {
+  background-color: transparent;
+  border: none;
+  border-radius: 0px;
+  color: #000;
+  padding: 0px;
+  font-size: 14px;
+}
+
+.dropdown-container .el-button {
+  border: none;
+}
+
+#customerList .el-icon-more::before {
+  color: #fff;
+}
+
+#customerList .up-and-down {
+  color: #189BD9;
+}
+
+#customerList .up-and-down:hover {
+  color: #20A0FF;
+}
+
+#customerList .el-table-filter__checkbox-group .el-checkbox {
+  margin-left: 5px;
+}
+
+#customerList .el-table-filter__bottom {
+  text-align: center;
+}
+
+.up-and-down .el-upload__files {
+  display: none
+}
+
+#customerList .ellips {
+  width: 250px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#customerList .publicClient {
+  margin-right: 10px;
+}
+
+#customerList .publicClient .el-select {
+  width: 120px
+}
+
+.bg-bla {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.el-table {
+  cursor: pointer;
+}
+</style>
+<script>
+import address from 'assets/js/address'
+import http from 'assets/js/http'
+import resetBtn from 'common/reset.vue'
+import failRes from './failRes.vue'
+import staff from '../common/staff.vue'
+import registerOption from 'assets/json/register_status.json'
+import _ from 'lodash'
+export default {
+  data() {
+    return {
+      sturdyMan: '',
+      show: Lockr.get('authList'),
+      keywords: '',
+      currentPage: 1,
+      dataCount: 0,
+      dataPages: 0,
+      pageSize: 15,
+      tableData: [],
+      follow: '',
+      category: '',
+      aLink: '',
+      uploadLink: '',
+      status: '',
+      level: '',
+      register: null,
+      errorData: [],
+      categoryOptions: [],
+      isFirst: true,
+      isEmpty: false,
+      showDialog: false,
+      cityValue: '',
+      proValue: '',
+      proOptions: address.pro,
+      cityOptions: address['city']['广东省'],
+      registerOption,
+      flag: 2,
+      uploadPath: '',
+      path: '',
+      selList: [],
+      sturdyMen: [],
+      fullscreenLoading: false,
+      followPeoples: [],
+      followStatus: [
+        { text: '全部', value: '' },
+        { text: '未联系', value: '0' },
+        { text: '已跟进', value: '1' },
+        { text: '无效', value: '2' },
+        { text: '需回访', value: '3' }
+      ],
+      levelOptions: [
+        { text: '全部', value: '' },
+        { text: 'A热门客户', value: '1' },
+        { text: 'B普通客户', value: '2' },
+        { text: 'C潜在客户', value: '3' },
+        { text: 'D无法沟通', value: '4' }
+      ]
+    }
+  },
+  watch: {
+    proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+      this.cityOptions = address['city'][val]
+      this.proValue = val
+      if (!this.isFirst) {
+        this.cityValue = ''
+      } else {
+        this.isFirst = false
+      }
+      this.select()
+    },
+    '$route'(to, from) { // 监听路由改变
+      this.init()
+    },
+    sturdyMan(val) { // 监听跟进人员
+      this.follow = val
+    }
+  },
+  methods: {
+    clear(selection, row) {
+      // console.log(selection)
+    },
+    isSelect(row, index) {
+      return true
+    },
+    sureAssign() { // 确认批量分配跟进人员操作
+      this.showDialog = true
+      if (!this.hasSelect) {
+        return _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+      this.$nextTick(() => {
+        this.$refs.staff.open()
+      })
+    },
+    sureDel() { // 确认删除操作
+      if (!this.hasSelect) {
+        return _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+      this.$confirm('确认批量删除操作?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.apiPost('customers/deletes', { ids: this.selList }).then((res) => {
+          if (res.code == 200) {
+            _g.reloadPage(this)
+            _g.toastMsg(this, 'success', '删除成功')
+          } else {
+            _g.dealError(self, res)
+          }
+        })
+      }).catch(() => {
+        // do cancel
+      })
+    },
+    sureUnRelative() { // 确认取消关联操作
+      if (!this.hasSelect) {
+        return _g.toastMsg(this, 'warning', '请勾选数据')
+      }
+      this.$confirm('确认取消关联操作?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.apiPost('customers/del_relation', { ids: this.selList }).then((res) => {
+          if (res.code == 200) {
+            _g.reloadPage(this)
+            _g.toastMsg(this, 'success', '取消关联成功')
+          } else {
+            _g.toastMsg(this, 'warning', res.error)
+          }
+        })
+      })
+    },
+    handleSelectionChange(val) { // 批量选择
+      this.selList = []
+      let arr = []
+      _(val).forEach((res, key) => {
+        this.selList.push(res.id)
+        arr = arr.concat(res.followPeople || [])
+      })
+      this.followPeoples = arr
+    },
+    handleClearFilter() {
+      this.cityValue = ''
+      this.proValue = ''
+      this.keywords = ''
+      this.sturdyMan = ''
+      this.category = ''
+      this.follow = ''
+      this.select()
+      // _g.reloadPage(this)
+    },
+    select() { // 通过路由的参数保存页面的状态
+      const { keywords, currentPage, proValue, cityValue, level, sturdyMan, follow, pageSize, register, category } = this
+      let query = {}
+      cityValue ? query.city = cityValue : null
+      keywords ? query.keyword = keywords : null
+      currentPage ? query.page = currentPage : null
+      proValue ? query.province = proValue : null
+      sturdyMan ? query.sturdyMan = sturdyMan : null
+      level ? query.level = level : null
+      follow ? query.follow = follow : null
+      pageSize ? query.pageSize = pageSize : null
+      register ? query.register = register : null
+      category ? query.category = category : null
+      router.push({ path: this.$route.url, query })
+    },
+    init(params = null) { // 根据页面的状态获取页面数据
+      this.fullscreenLoading = true
+      var self = this
+      self.path = self.$route.fullPath
+      if (params) {
+        self.keywords = params.keyword || null
+        self.currentPage = Number(params.page) || 1
+        self.proValue = params.province || null
+        self.cityValue = params.city || null
+        self.sturdyMan = Number(params.sturdyMan) || null
+        self.follow = Number(params.sturdyMan) || null
+        self.pageSize = Number(params.pageSize) || null
+        this.register = Number(params.register) || null
+        this.category = Number(params.category) || null
+      }
+      self.getFollowStaff()
+      self.getCustomerList()
+    },
+    handleSizeChange(val) {
+      this.pageSize = val
+      this.select()
+    },
+    handleCurrentChange(val) { // 分页的选择
+      this.currentPage = val
+      this.select()
+    },
+    applyFilter(filter) { // 根据客户级别的条件或跟进状态的条件刷选
+      var self = this
+      if (filter.p_ranking) {
+        if (filter.p_ranking.length === 0) {
+          self.level = ''
+        } else if (filter.p_ranking.length > 0) {
+          self.level = filter.p_ranking[0]
+        }
+      }
+      if (filter.followStatus) {
+        if (filter.followStatus.length === 0) {
+          self.status = ''
+        } else if (filter.followStatus.length > 0) {
+          self.status = filter.followStatus[0]
+        }
+      }
+      if (filter.register) { // 跟进状态
+        if (filter.register.length === 0) {
+          this.register = ''
+        } else if (filter.register.length > 0) {
+          this.register = filter.register[0]
+        }
+      }
+      if (filter.category) { // 跟进状态
+        if (filter.category.length === 0) {
+          this.category = ''
+        } else if (filter.category.length > 0) {
+          this.category = filter.category[0]
+        }
+      }
+      self.getCustomerList()
+    },
+    getCustomerList() { // 获取客户列表
+      !this.hasSelect ? this.fullscreenLoading = true : null
+      if (this.canView) {
+        let params = {
+          isAuth: 'all',
+          demandOrService: this.demandOrService || null,
+          keyword: this.keywords || null,
+          page: this.currentPage || null,
+          status: this.status || null,
+          pagesize: this.pageSize || null,
+          level: this.level || null,
+          follow: this.follow || null,
+          register: this.register || null,
+          province: this.proValue || null,
+          city: this.cityValue || null,
+          category: this.category || null
+        }
+        this.apiGet('customers', { params }).then((res) => {
+          this.fullscreenLoading = false
+          if (res.code == 200) {
+            this.customerData(res)
+            this.demandOrService === 2 ? this.fetchCategory() : null
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    fetchCategory() {
+      if (this.categoryOptions.length > 0) return
+      this.apiGet('types-products-words').then(res => {
+        if (res.code === 200) {
+          this.categoryOptions = res.data.map(item => {
+            return { text: item.name, value: item.id }
+          })
+        }
+      })
+    },
+    customerData(res) { // 对获取的客户列表的信息进行处理
+      var self = this
+      if (res.code != 200) {
+        _g.dealError(self, res)
+      } else {
+        self.tableData = res.data.list
+        self.currentPage = res.data.current_page
+        self.dataCount = res.data.total_count
+        self.dataPages = res.data.total_pages
+        if (res.data.list) {
+          for (var j = 0; j < res.data.list.length; j++) {
+            const arr = ['', 'A热门客户', 'B普通客户', 'C潜在客户', 'D无法沟通']
+            const { level } = res.data.list[j]
+            self.tableData[j].p_ranking = arr[level]
+            let peoples = res.data.list[j].followPeople || []
+            if (peoples.length != 0) {
+              for (var i = 0; i < peoples.length; i++) {
+                if (i === 0) {
+                  self.tableData[j].p_name = peoples[i].name
+                } else {
+                  self.tableData[j].p_name += '、' + peoples[i].name
+                }
+              }
+            } else {
+              self.tableData[j].p_name = '未分配人员'
+            }
+            if (res.data.list[j].demandServiceContacts) {
+              this.canEdit ? self.tableData[j].p_contact = res.data.list[j].demandServiceContacts.name : null
+              this.canEdit ? self.tableData[j].p_phone = res.data.list[j].demandServiceContacts.phone : null
+            }
+            if (res.data.list[j].followRecord) {
+              self.tableData[j].p_content = res.data.list[j].followRecord.content
+            }
+          }
+        }
+      }
+    },
+    download() { // 下载模板
+      var self = this
+      if (!self.canEdit) { return }
+      let params = {
+        isDemand: this.demandOrService === 1 ? 1 : 0
+      }
+      self.apiGet('customers/template', { params }).then((res) => {
+        if (res.code == 200) {
+          _g.downloadFile(res.data)
+        } else {
+          _g.dealError(self, res)
+        }
+      })
+    },
+    uploadFail(err, res, file) { // 导入数据失败
+      _g.toastMsg(this, 'error', '导入失败')
+    },
+    loadFile(file) {
+      this.$loading({ customClass: 'bg-bla', text: '拼命加载中' })
+    },
+    batchCallback() { // 批量操作后的回调
+      this.getCustomerList()
+      this.clear()
+    },
+    uploadSuccess(res, file, fileList) { // 导入数据成功
+      var self = this
+      if (res.code == 200) {
+        let data = {
+          path: res.data,
+          isDemand: this.demandOrService === 1 ? 1 : 0
+        }
+        self.apiPost('customers/import', data).then((res) => {
+          self.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+          if (res.code == 200) {
+            _g.toastMsg(self, 'success', '导入成功')
+            self.getCustomerList()
+            if (res.data.length) {
+              self.errorData = res.data
+              _g.toastMsg(this, 'error', '导入失败')
+              self.$refs.failRes.open()
+            }
+          } else {
+            _g.toastMsg(self, 'error', res.error)
+          }
+        })
+      } else {
+        self.$loading({ customClass: 'bg-bla', text: '拼命加载中' }).close()
+        _g.toastMsg(self, 'error', res.error)
+      }
+    },
+    getFollowStaff() { // 获取跟进人员
+      var self = this
+      if (self.canView) {
+        self.apiGet('customers/customer_follow_list').then((res) => {
+          if (res.code != 200) {
+            _g.dealError(self, res)
+          } else {
+            self.sturdyMen = res.data
+            self.sturdyMen.unshift({ name: '全部', id: 0 })
+            self.sturdyMen.push({ name: '未分配人员', id: -1 })
+          }
+        })
+      } else {
+        return
+      }
+    }
+  },
+  components: {
+    staff,
+    failRes,
+    'reset-btn': resetBtn
+  },
+  computed: {
+    setOprWidth() { // 设置表格中操作列的宽度
+      return this.canEdit ? 150 : 75
+    },
+    loadingDone() { // 加载完毕
+      return !this.fullscreenLoading
+    },
+    hasSelect() { // 已经勾选信息
+      return this.selList.length !== 0
+    },
+    hasNextPage() { // 是否有下一页
+      return this.dataPages > 1
+    },
+    showPagination() { // 显示分页
+      return this.hasNextPage && this.loadingDone
+    },
+    canBatchFollow() { // 拥有批量分配
+      return this.show == null || this.show['customers_batchFollow']
+    },
+    canView() { // 拥有查看
+      return this.show == null || this.show['publicClient_view']
+    },
+    canAdd() { // 可以添加/导入
+      return this.show == null || this.show['client_add']
+    },
+    canEdit() { // 拥有编辑
+      return this.show == null || this.show['publicClient_edit']
+    },
+    demandOrService() { // 需求方或服务方
+      return this.$route.name === 'publicClientDemandList' ? 1 : 2
+    },
+    queryParams() {
+      return { ...this.$route.query, type: this.demandOrService }
+    }
+  },
+  created() {
+    let queryParams = this.$route.query
+    let hasQuery = Object.keys(queryParams).length > 0 // 是否有查询参数
+    hasQuery ? this.init(queryParams) : this.init()
+    this.uploadLink = window.HOST + 'Upload/excel'
+  },
+  mixins: [http]
+}
+</script>

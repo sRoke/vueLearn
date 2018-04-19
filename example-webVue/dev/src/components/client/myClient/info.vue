@@ -1,0 +1,858 @@
+<template>
+  <div class="customerData">
+  
+    <!-- 基础信息模板 -->
+    <el-card class="box-card base-card m-b-20">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">基本信息</span>
+        <!--<el-button class="fr" type="success" @click="addContact">保存 </el-button>-->
+      </div>
+      <el-form :inline="true"
+               :model="form"
+               label-width="100px">
+        <el-row>
+          <el-col :span="8">
+            <el-form-item label="编号：">
+              <div style="color: #5e6d82;">{{ form.num }}</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="公司名称：">
+              <el-input v-if="canEdit"
+                        v-model="form.name"
+                        :disabled="isEdit"></el-input>
+              <span v-else>{{ form.name }}</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="公司认证：">
+              <el-radio-group v-if="canEdit"
+                              v-model="auth">
+                <el-radio :label="0">未认证</el-radio>
+                <el-radio :label="1">已认证</el-radio>
+              </el-radio-group>
+              <span v-else>{{ form.authLabel }}</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8">
+            <el-form-item label="公司电话：">
+              <el-input v-if="canEdit"
+                        v-model="form.mobile"
+                        :disabled="isEdit"></el-input>
+              <span v-else>{{ form.mobile }}</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="公司规模：">
+              <el-input v-if="canEdit"
+                        v-model="form.size"
+                        :disabled="isEdit"></el-input>
+              <span v-else>{{ form.size }}</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="公司级别：">
+              <el-select v-if="canEdit"
+                         v-model="value"
+                         placeholder="请选择"
+                         style="width: 100%;"
+                         :disabled="isEdit">
+                <el-option v-for="item in options"
+                           :label="item.label"
+                           :value="item.value">
+                </el-option>
+              </el-select>
+              <span v-else>{{ value }}</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span='12'>
+            <el-form-item label="公司地址：">
+              <el-row v-if="canEdit"
+                      type='flex'
+                      justify='start'>
+                <div>
+                  <el-cascader :options="proCityList"
+                               v-model="proCityVal"
+                               @change="handleChangeCity">
+                  </el-cascader>
+                </div>
+                <div>
+                  <el-input class='m-l-15'
+                            v-model="form.address"
+                            placeholder="请输入详细地址">
+                  </el-input>
+                </div>
+              </el-row>
+              <span v-else>{{ proCityVal+form.address }}</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="8">
+            <el-form-item label="公司简介："
+                          class='desp'>
+              <el-input v-if="canEdit"
+                        type="textarea"
+                        class="textA"
+                        v-model="form.textA"
+                        :disabled="isEdit">
+              </el-input>
+              <span v-else>{{ form.textA }}</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+    </el-card>
+    <!-- 基础信息模板 -->
+  
+    <!-- 联系人模板 -->
+    <el-card class="box-card contact-card m-b-20">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">联系人</span>
+        <el-button class="fr"
+                   type="success"
+                   v-if="canEdit"
+                   @click="addContact">添加
+        </el-button>
+      </div>
+      <el-table :data="contactList"
+                row-class-name="tx-c m-t-5 m-b-5">
+        <el-table-column label="联系人"
+                         header-align="center">
+          <template scope="scope">
+            <el-input v-if="canEdit"
+                      v-model="scope.row.name"
+                      placeholder="请输入联系人"
+                      :disabled="isEdit"></el-input>
+            <span v-else>{{ scope.row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="职位"
+                         header-align="center">
+          <template scope="scope">
+            <el-input v-if="canEdit"
+                      v-model="scope.row.position"
+                      placeholder="请输入职位"
+                      :disabled="isEdit"></el-input>
+            <span v-else>{{ scope.row.position }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="手机号"
+                         header-align="center">
+          <template scope="scope">
+            <el-input v-if="canEdit"
+                      v-model="scope.row.phone"
+                      placeholder="请输入手机号"
+                      :disabled="isEdit"></el-input>
+            <span v-else>{{ scope.row.phone }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="邮箱"
+                         header-align="center">
+          <template scope="scope">
+            <el-input v-if="canEdit"
+                      v-model="scope.row.email"
+                      placeholder="请输入邮箱"
+                      :disabled="isEdit"></el-input>
+            <span v-else>{{ scope.row.email }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作"
+                         v-if="!isEdit && canEdit"
+                         header-align="center">
+          <template scope="scope">
+            <el-button size="small"
+                       type="danger"
+                       @click="deleteRow(contactList, scope.$index,'contactList')">删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+    <!-- 联系人模板 -->
+  
+    <!--资料情况模板-->
+    <el-card class="box-card data-card m-b-20">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">资料情况</span>
+        <el-button class="fr"
+                   v-if="canEdit"
+                   type="success"
+                   @click.prevent="uploadFile">添加
+        </el-button>
+      </div>
+      <el-table :data="customerData"
+                row-class-name="tx-c">
+        <el-table-column prop="name"
+                         label="上传人"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column prop="type"
+                         label="证件名"
+                         header-align="center">
+          <template scope="scope">
+            <a :href="scope.row.showPath"
+               download="scope.row.type"
+               style='color: #1f2d3d'
+               class="lineh-36 underline">{{ scope.row.type }}</a>
+          </template>
+        </el-table-column>
+        <el-table-column prop="create_time"
+                         label="上传时间"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column label="备注"
+                         header-align="center">
+          <template scope="scope">
+            <el-col :span="24">
+              <el-input v-if="canEdit"
+                        :disabled="isEdit"
+                        placeholder="请输入内容"
+                        v-model="scope.row.remark">
+              </el-input>
+              <span v-else>{{ scope.row.remark }}</span>
+            </el-col>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作"
+                         header-align="center"
+                         v-if="!isEdit && canEdit">
+          <template scope="scope">
+            <el-button size="small"
+                       type="danger"
+                       @click="deleteRow(customerData, scope.$index, 'customerData')">删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+    <!--资料情况模板-->
+  
+    <!-- 跟进情况模板 -->
+    <el-card class="box-card follow-card">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">跟进情况</span>
+      </div>
+      <el-form ref="form"
+               :model="form"
+               label-width="100px">
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="跟进人员：">
+              <el-col :span="6"
+                      v-for="item in followPeople">
+                <el-form-item :label="item.label"
+                              label-width="75px">
+                  <el-tag type="primary"
+                          v-show="item.name"
+                          :closable="isEdit"
+                          @close="closeTag(item)">{{ item.name }}</el-tag>
+                </el-form-item>
+              </el-col>
+              <!--<staff ref="staff"
+                           :followPeople="followPeople"
+                           v-on:selectedStaff="onChildChange"
+                           :clients="[]"></staff>-->
+            </el-form-item>
+          </el-col>
+        </el-row>
+  
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="客户状态：">
+              <el-radio-group v-if="canEdit"
+                              v-model="customerStatus">
+                <el-radio label="已跟进"
+                          :disabled="isEdit"></el-radio>
+                <el-radio label="无效"
+                          :disabled="isEdit"></el-radio>
+              </el-radio-group>
+              <span v-else>{{ customerStatus }}</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+  
+        <el-row>
+          <el-col :span="24">
+            <el-form-item label="回访时间：">
+              <el-date-picker v-if="canEdit"
+                              v-model="time"
+                              type="datetime"
+                              placeholder="选择日期范围"
+                              :disabled="disableVisit">
+              </el-date-picker>
+              <span v-else>{{ time }}</span>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="canEdit"
+                  :span="8">
+            <el-form-item label="跟进说明："
+                          :required="getRequired">
+              <el-input type="textarea"
+                        v-model="text"
+                        placeholder="请填写跟进说明"
+                        :autosize="{ minRows: 5, maxRows: 10}"
+                        :disabled="isEdit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="2">
+            <el-button type="text"
+                       class="m-l-20"
+                       @click.prevent="addRecord"
+                       v-if="!isEdit && canEdit">添加</el-button>
+          </el-col>
+          <el-col :span="24">
+            <el-table class='m-b-10'
+                      :data="sturdyData"
+                      row-class-name="tx-c">
+              <el-table-column prop="content"
+                               label="跟进记录"
+                               header-align="center">
+              </el-table-column>
+              <el-table-column prop="create_time"
+                               width="200"
+                               label="添加时间"
+                               header-align="center">
+              </el-table-column>
+              <el-table-column prop="name"
+                               label="说明人"
+                               width="180"
+                               header-align="center">
+              </el-table-column>
+              <el-table-column prop="return_visit"
+                               label="回访时间"
+                               width="200"
+                               header-align="center">
+              </el-table-column>
+            </el-table>
+          </el-col>
+        </el-row>
+      </el-form>
+    </el-card>
+    <!-- 跟进情况模板 -->
+  
+    <el-row class="fr m-t-30">
+      <el-col>
+        <el-button @click="goback()">返回</el-button>
+        <el-button type="primary"
+                   @click="edit()"
+                   :loading="fetching"
+                   v-if="canEdit">保存</el-button>
+      </el-col>
+    </el-row>
+  
+    <!-- 弹出层 -->
+    <upload ref="upload"></upload>
+    <!-- 弹出层 -->
+  </div>
+  </div>
+</template>
+
+<style>
+.box-card .el-card__body {
+  padding: 0;
+}
+
+.box-card.base-card .el-card__body,
+.box-card.follow-card .el-card__body {
+  padding: 20px;
+}
+
+.box-card .el-table__body-wrapper .cell {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.el-form--inline .el-form-item__label {
+  float: left;
+}
+</style>
+
+<script>
+import address from 'assets/js/city-data.json'
+import http from 'assets/js/http'
+import staff from '../common/staff.vue'
+import upload from '../common/upload.vue'
+import moment from 'moment'
+export default {
+  data() {
+    return {
+      status: '',
+      customerStatus: '',
+      is_status: 0,
+      efficientStatus: false,
+      invalidStatus: false,
+      auth: 0,
+      canEdit: false,
+      cus_id: null,
+      fetching: false,
+      proCityList: address,
+      proCityVal: [],
+      source: '',
+      form: {
+        province: '',
+        city: '',
+        area: '',
+        address: '',
+        name: '',
+        num: '',
+        account: '',
+        source: '',
+        password: '',
+        type: '',
+        mobile: '',
+        size: '',
+        textA: ''
+      },
+      contactList: [],
+      options: [{
+        value: '选项1',
+        label: 'A热门客户'
+      }, {
+        value: '选项2',
+        label: 'B普通客户'
+      }, {
+        value: '选项3',
+        label: 'C潜在客户'
+      }, {
+        value: '选项4',
+        label: 'D无法沟通'
+      }],
+      levels: ['', 'A热门客户', 'B普通客户', 'C潜在客户', 'D无法沟通'],
+      value: '',
+      customerData: [],
+      input: '',
+      text: '',
+      sturdyData: [],
+      followPeople: [],
+      level: '',
+      del_contact_list: [],
+      follow_people: [],
+      del_data_situation: [],
+      is_saleClose: false,
+      is_serviceClose: false,
+      is_pushClose: false,
+      match: '',
+      del_follow_record: [],
+      new__follow_record: [],
+      cancel_release: '释放',
+      is_release: true,
+      isFirst: true,
+      uploadData: [],
+      isEdit: true,
+      show: Lockr.get('authList'),
+      follow_num: '',
+      uploadUrl: '',
+      fileList: [],
+      logo: '',
+      imgSrc: '',
+      head: require('../../../assets/images/head.png'),
+      path: '',
+      time: ''
+    }
+  },
+  watch: {
+    proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+      var self = this
+      // self.cityValue = ''
+      self.cityOptions = address['city'][val]
+      self.proValue = val
+      if (!self.isFirst) {
+        self.cityValue = ''
+      } else {
+        self.isFirst = false
+      }
+    },
+    value(val) { // 监听客户级别的选择，并赋予level
+      var self = this
+      switch (val) {
+        case '选项1': self.level = 1
+          break
+        case '选项2': self.level = 2
+          break
+        case '选项3': self.level = 3
+          break
+        case '选项4': self.level = 4
+          break
+      }
+    },
+    customerStatus(val) { // 监听客户状态
+      this.is_status = val !== '无效' ? 1 : 2
+    }
+  },
+  methods: {
+    beforeAvatarUpload(file) {
+      var self = this
+      if (self.isEdit) {
+        _g.toastMsg(self, 'warning', '您没有上传头像的权限！')
+      }
+      return !self.isEdit
+    },
+    uploadFail(err, res, file) { // 头像上传失败
+      _g.toastMsg(this, 'warning', '上传失败！')
+    },
+    uploadSuccess(res, file, fileList) { // 头像上传成功
+      var self = this
+      if (fileList.length == 2) {
+        fileList.shift()
+      }
+      self.fileList = fileList
+      self.imgSrc = imgUrl + self.fileList[0].response.data
+      _g.toastMsg(self, 'success', '上传成功！')
+    },
+    addRecord() { // 添加跟进说明
+      var self = this
+      // var dateTime = new Date()
+      if (self.text) {
+        var temp = {
+          content: self.text,
+          name: Lockr.get('userInfo').u_realname,
+          create_time: _g.getDatetime(),
+          type: true,
+          return_visit: self.time ? moment(self.time).format('YYYY-MM-DD HH:mm:ss') : null
+        }
+        self.sturdyData.push(temp)
+        self.new__follow_record.push(temp)
+        self.text = ''
+      } else {
+        _g.toastMsg(self, 'warning', '请填写跟进说明！')
+      }
+    },
+    followAdd(form) { // 添加客户上传资料的情况
+      var self = this
+      self.customerData.push({
+        name: Lockr.get('userInfo').u_realname,
+        type: form.name,
+        create_time: _g.getDatetime(),
+        remark: form.desc,
+        path: form.fileList[0].response.data,
+        showPath: imgUrl + form.fileList[0].response.data,
+        introduction: ''
+      })
+    },
+    uploadFile() { // 打开上传文件的窗口
+      var self = this
+      self.$refs.upload.open()
+    },
+    onChildChange(res) { // 获取选择的跟进人员
+      var self = this
+      self.followPeople = []
+      self.followPeople = res
+    },
+    addContact() { // 添加联系方式
+      var self = this
+      var temp = {
+        name: '',
+        phone: '',
+        email: '',
+        position: ''
+      }
+      self.contactList.push(temp)
+    },
+    deleteRow(item, index, str) { // 删除
+      var self = this
+      self.$confirm('确认删除?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        if (str == 'contactList') {
+          self.del_contact_list.push(item[index].id)
+        } else if (str == 'customerData') {
+          self.del_data_situation.push(item[index].id)
+        } else if (str == 'sturdyData' && item[index].id) {
+          self.del_follow_record.push(item[index].id)
+        }
+        item.splice(index, 1)
+        _g.toastMsg(self, 'success', '删除成功')
+      }).catch(() => {
+        self.$message({
+          type: 'info',
+          message: '已取消删除'
+        })
+      })
+    },
+    release() { // 释放跟进人员
+      var self = this
+      var temp = ''
+      if (Lockr.get('authList') == null || self.show['myClient_button']) {
+        self.is_saleClose = !self.is_saleClose
+        self.is_serviceClose = !self.is_serviceClose
+        self.is_pushClose = !self.is_pushClose
+        self.cancel_release = self.is_release ? '取消' : '释放'
+        self.is_release = !self.is_release
+      } else if (self.show['myClient_view'] && (Lockr.get('roleType').group_id == 1 || Lockr.get('roleType').group_id == 2 || Lockr.get('roleType').group_id == 3)) {
+        for (var i = 0; i < self.followPeople.length; i++) {
+          if (Lockr.get('userInfo').u_realname == self.followPeople[i].name) {
+            temp = self.followPeople[i]
+          }
+        }
+        self.$confirm('确认释放?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          self.followPeople.splice(self.followPeople.indexOf(temp), 1)
+          self.follow_num = self.follow_num - 1
+          _g.toastMsg(self, 'success', '释放成功')
+        }).catch(() => {
+          self.$message({
+            type: 'info',
+            message: '已取消释放'
+          })
+        })
+      } else {
+        _g.toastMsg(self, 'warning', '您未跟进该客户！')
+      }
+    },
+    closeTag(item) { // 删除跟进人员标签
+      var self = this
+      self.followPeople.splice(self.followPeople.indexOf(item), 1)
+    },
+    getCustomerInfo() { // 获取客户信息
+      var self = this
+      self.apiGet('customers/' + self.cus_id).then((res) => {
+        // console.log('888888888888888888res', _g.j2s(res))
+        if (res.code != 200) {
+          _g.dealError(this, res)
+        } else {
+          self.form.name = res.data.name
+          self.time = res.data.return_visit
+          if (res.data.source == 1) {
+            self.form.source = '注册'
+          } else {
+            self.form.source = '系统添加'
+          }
+          self.logo = res.data.logo
+          if (self.logo == 0) {
+            self.imgSrc = self.head
+          } else {
+            self.imgSrc = imgUrl + self.logo
+          }
+          self.follow_num = res.data.follow_num
+          self.match = res.data.require
+          self.$emit('demandRecord', self.match)
+          self.form.num = res.data.num
+          self.form.account = res.data.account
+          self.value = self.levels[res.data.level]
+          self.proValue = res.data.province
+          self.cityValue = res.data.city
+          self.contactList = res.data.demandServiceContacts || []
+          self.form.mobile = res.data.phone
+          self.form.size = res.data.size
+          self.form.textA = res.data.remark
+          self.form.province = res.data.province
+          self.form.city = res.data.city
+          self.form.area = res.data.area
+          self.form.address = res.data.address
+          self.auth = res.data.auth || 0
+          self.proCityVal = [res.data.province, res.data.city, res.data.area]
+          // if (res.data.province) {
+          //   self.proCityVal = [res.data.province + '/' + res.data.city + '/' + res.data.area]
+          // } else {
+          //   self.proCityVal = []
+          // }
+          if (res.data.status !== 2) {
+            self.customerStatus = '已跟进'
+          } else {
+            self.customerStatus = '无效'
+          }
+          self.sturdyData = res.data.followRecord
+          if (res.data.followPeople.length != 0) {
+            self.followPeople = res.data.followPeople
+          }
+          self.customerData = res.data.dataRecord
+          for (var i = 0; i < self.customerData.length; i++) {
+            self.customerData[i].showPath = imgUrl + self.customerData[i].path
+          }
+        }
+      })
+    },
+    selectStaff() { // 选择跟进人员
+      var self = this
+      const { group_id, title } = Lockr.get('roleType')
+      if (Lockr.get('authList') == null || self.show['myClient_button']) {
+        self.$refs.staff.open()
+      } else if (self.show['myClient_view'] && group_id == 1 || group_id == 2 || group_id == 3) {
+        for (var i = 0; i < self.followPeople.length; i++) {
+          if (Lockr.get('userInfo').u_id == self.followPeople[i].id) {
+            _g.toastMsg(self, 'warning', '您已跟进该客户！')
+            return
+          } else if (title == self.followPeople[i].label) {
+            _g.toastMsg(self, 'warning', '该客户已有' + title + '跟进！')
+            return
+          }
+        }
+        if (Lockr.get('userInfo').u_follow_num > self.follow_num) {
+          self.$confirm('确认跟进该客户?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            self.followPeople.push({ label: title, name: Lockr.get('userInfo').u_realname, id: Lockr.get('userInfo').u_id })
+            self.follow_num = self.follow_num + 1
+            // console.log(_g.j2s(self.followPeople))
+            _g.toastMsg(self, 'success', '已跟进')
+          }).catch(() => {
+            self.$message({
+              type: 'info',
+              message: '已取消跟进'
+            })
+          })
+        } else {
+          _g.toastMsg(self, 'warning', '您的跟进客户数已达上限！')
+        }
+      } else {
+        _g.toastMsg(self, 'warning', '只有销售人员、客服、地推才能跟进！')
+      }
+    },
+    handleChangeCity(val) {
+      this.form.province = val[0]
+      this.form.city = val[1]
+      this.form.area = val[2]
+    },
+    edit() { // 保存修改信息
+      var self = this
+      self.toggleFetching()
+      if (this.getRequired) {
+        self.toggleFetching()
+        return _g.toastMsg(self, 'error', '没有添加任何跟进记录')
+      }
+      // console.log('self.followRecordLength=' + self.followRecordLength)
+      // console.log(_g.j2s(self.sturdyData))
+      // console.log(_g.j2s(self.customerData))
+      // for (var j = 0; j < self.contactList.length; j++) {
+      //   if (!(/^1[34578]\d{9}$/.test(self.contactList[j].phone))) {
+      //     _g.toastMsg(self, 'warning', '请在第' + (j + 1) + '个手机号那填写有效的手机号码！')
+      //     return
+      //   }
+      // }
+      for (var s = 0; s < self.customerData.length; s++) {
+        if (self.customerData[s].id) {
+          self.uploadData.push({
+            id: self.customerData[s].id,
+            name: self.customerData[s].name,
+            type: self.customerData[s].type,
+            create_time: self.customerData[s].create_time,
+            remark: self.customerData[s].remark,
+            path: self.customerData[s].path,
+            introduction: self.customerData[s].introduction
+          })
+        } else {
+          self.uploadData.push({
+            name: self.customerData[s].name,
+            type: self.customerData[s].type,
+            create_time: self.customerData[s].create_time,
+            remark: self.customerData[s].remark,
+            path: self.customerData[s].path,
+            introduction: self.customerData[s].introduction
+          })
+        }
+      }
+      for (var i = 0; i < self.followPeople.length; i++) {
+        self.follow_people.push(self.followPeople[i].id)
+      }
+      if (self.fileList.length) {
+        self.logo = self.fileList[0].response.data
+      } else {
+        self.logo = 0
+      }
+      // console.log('self.follow_people' + _g.j2s(self.follow_people))
+      let data = {
+        id: self.cus_id,
+        // logo: self.logo,
+        dataRecord: self.uploadData,
+        followPeople: self.follow_people,
+        demandServiceContacts: self.contactList,
+        followRecord: self.new__follow_record,
+        auth: self.auth ? 1 : 0,
+        name: self.form.name,
+        // password: self.form.password,
+        phone: self.form.mobile,
+        remark: self.form.textA,
+        city: self.form.city,
+        area: self.form.area,
+        province: self.form.province,
+        address: self.form.address,
+        size: self.form.size,
+        level: self.level,
+        // del_contact_list: self.del_contact_list,
+        status: self.is_status
+        // del_follow_record: self.del_follow_record,
+        // del_data_situation: self.del_data_situation
+      }
+      if (data.status !== 2) {
+        data.return_visit = self.time ? moment(self.time).format('YYYY-MM-DD HH:mm:ss') : null
+      }
+      self.apiPost('customers/', data).then((res) => {
+        if (res.code == 200) {
+          _g.toastMsg(this, 'success', '编辑成功')
+          setTimeout(() => {
+            self.toggleFetching()
+            self.goback()
+          }, 1500)
+        } else {
+          self.toggleFetching()
+          _g.dealError(self, res)
+        }
+      })
+    },
+    goback() { // 返回上一页面
+      if (this.$route.params.path) {
+        this.path = this.$route.params.path
+      } else {
+        this.path = Lockr.get('path')
+      }
+      location.hash = this.path
+    },
+    getAccount(index) { // 对手机号码进行验证
+      var self = this
+      if (!(/^1[34578]\d{9}$/.test(self.contactList[index].phone))) {
+        _g.toastMsg(self, 'warning', '请填写有效的手机号码！')
+      }
+    },
+    toggleFetching() {
+      this.fetching = !this.fetching
+    }
+  },
+  computed: {
+    authLabel() {
+      return this.auth ? '已认证' : '未认证'
+    },
+    disableVisit() {
+      return this.is_status === 2
+    },
+    getRequired() {
+      return this.is_status === 1 && this.new__follow_record.length === 0
+    }
+  },
+  created() {
+    var self = this
+    const { id, path } = self.$route.params
+    const { name } = self.$route
+    if (path) {
+      Lockr.set('path', path)
+    }
+    self.uploadUrl = window.HOST + 'Upload/data'
+    if (self.show == null || self.show['myClient_edit']) {
+      self.isEdit = false
+    }
+    self.cus_id = id
+    self.canEdit = name === 'myClientEdit'
+    self.getCustomerInfo()
+  },
+  components: {
+    staff,
+    upload
+  },
+  mixins: [http]
+}
+</script>

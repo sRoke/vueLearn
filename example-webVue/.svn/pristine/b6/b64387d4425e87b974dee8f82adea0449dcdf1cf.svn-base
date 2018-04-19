@@ -1,0 +1,106 @@
+<template>
+  <el-dialog ref="dialog" custom-class="w-420 h-500" title="编辑">
+    <div class="ovf-auto">
+      <el-form ref="form" :model="form" :rules="rules" label-width="85px">
+        <el-form-item label="服务名称" prop="server_name">
+          <el-input v-model.trim="form.server_name"></el-input>
+        </el-form-item>
+        <el-form-item label="Email" prop="email">
+          <el-input v-model.trim="form.email"></el-input>
+        </el-form-item>
+        <el-form-item label="Email密码">
+          <el-input v-model.trim="form.email_psw"></el-input>
+        </el-form-item>
+        <el-form-item label="Host">
+          <el-input v-model.trim="form.host"></el-input>
+        </el-form-item>
+        <el-form-item label="端口">
+          <el-input v-model.trim="form.port"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model.trim="form.remark"></el-input>
+        </el-form-item>
+      </el-form>
+    </div>
+    <div>
+      <el-button class="fr m-r-20" @click="close()">取消</el-button>
+      <el-button type="primary" class="fr m-r-30" :disabled="disable" @click="edit()" :loading="isLoading">提交</el-button>
+    </div>
+  </el-dialog>
+</template>
+<style>
+.box-shadow-none {
+  box-shadow: 0 1px 3px rgba(0,0,0,0);
+}
+.w-420 {
+  width: 420px !important;
+}
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  export default {
+    props: ['info'],
+    data() {
+      return {
+        isLoading: false,
+        disable: false,
+        form: {},
+        rules: {
+          server_name: [
+            {
+              required: true,
+              message: '请输入服务名称',
+              trigger: 'blur'
+            }
+          ],
+          email: [
+            {
+              type: 'email',
+              message: '请输入正确的邮箱地址',
+              trigger: 'blur,change'
+            }
+          ]
+        }
+      }
+    },
+    methods: {
+      open() {
+        this.$refs.dialog.open()
+        this.isLoading = false
+      },
+      close() {
+        this.$refs.dialog.close()
+      },
+      edit() {
+        this.$refs.form.validate((pass) => {
+          if (pass) {
+            this.isLoading = true
+            this.apiPut('system_configs/email', '', this.form).then((res) => {
+              console.log(res)
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '配置成功')
+                setTimeout(() => {
+                  location.reload()
+                }, 1000)
+              } else {
+                _g.dealError(this, res)
+                this.isLoading = !this.isLoading
+              }
+            })
+          }
+        })
+      }
+    },
+    created() {
+      this.apiGet('system_configs/email').then((res) => {
+        if (res.code == 200) {
+          this.form = res.data
+          console.log(this.form)
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    mixins: [http]
+  }
+</script>

@@ -1,0 +1,109 @@
+<template>
+  <el-dialog size="tiny"
+                     :title="editPhoneTitle"
+                     v-model="editPhoneShow" ref='dialog'>
+              <div class="m-b-20 edit-phone">
+                <div class="c-39 m-r-5 warning">注意：目前只能绑定一个手机号码，绑定新手机号码后将自动解除原有绑定。</div>
+                <div class="inline-block c-39 w-120 m-r-5 tx-r">绑定手机号码：</div>
+                <div class="inline-block w-160 m-r-5">{{userForm.account}}</div>
+                <a class="c-blue"
+                   href="javascript:void(0)"
+                   @click="getVerify(1)"
+                   v-if="second==0">发送验证码</a>
+                <span class="c-light-gray"
+                      v-else>{{second}}秒后重新获取</span>
+              </div>
+              <div class="m-b-20">
+                <div class="inline-block c-39 w-120 m-r-5 tx-r">验证码：</div>
+                <div class="inline-block w-160">
+                  <el-input auto-complete="off"
+                            v-model="oldVerify"></el-input>
+                </div>
+              </div>
+              <div slot="footer"
+                   class="dialog-footer">
+                <el-button :disabled="flagTrans('verifyOld')"
+                           @click="editPhoneShow = false">取 消</el-button>
+                <el-button type="primary"
+                           :loading="flagTrans('verifyOld')"
+                           @click="verifyOld">验 证</el-button>
+              </div>
+          </el-dialog>
+</template>
+<script>
+import http from '../../../assets/js/http'
+import _ from 'lodash'
+export default{
+  data() {
+    return {
+      ids: null,
+      editPhoneShow: false,
+      editPhoneTitle: '操作提醒',
+      userForm: {
+        account: 0
+      },
+      second: 0,
+      oldVerify: null
+    }
+  },
+  methods: {
+    open(n, m) {
+      this.ids = m
+      this.userForm.account = parseInt(n)
+      console.log(typeof (this.userForm.account))
+      this.$refs.dialog.open()
+    },
+    close() {
+      this$refs.dialog.close()
+    },
+    getVerify() {
+      let postData = {}
+      // postData.user_name = this.userForm.account
+      var phone = this.userForm.account
+      console.log(phone)
+      this.apiPost('sms/bind_verify?phone=' + phone).then((res) => {
+        if (res.code == 200) {
+          console.log(res)
+          this.$message({
+            message: res.data,
+            type: 'success'
+          })
+          this.second = 60
+          this.calcTime()
+        } else {
+          this.$message.error(res.error)
+        }
+      })
+    },
+    verifyOld() {
+      var dsu_id = this.$route.params.id
+      console.log(dsu_id)
+      // admin/demand_user/{dsu_id}/contacts/{id}/bind
+      this.apiPost('demand_user/' + dsu_id + '/contacts/' + this.ids + '/bind?verify=' + this.oldVerify).then((res) => {
+        if (res.code == 200) {
+          console.log(res.data)
+          this.$message({
+            message: '绑定成功',
+            type: 'success'
+          })
+          this.$refs.dialog.close()
+        } else {
+          this.$message.error(res.error)
+        }
+      })
+    },
+    flagTrans(val) {
+      return _.includes(this.postArr, val)
+    },
+    calcTime() {
+      this.second--
+      if (this.second != 0) {
+        this.calcTimeout = setTimeout(() => {
+          this.calcTime()
+        }, 1000)
+      }
+    }
+  },
+  mixins: [http]
+}
+</script>

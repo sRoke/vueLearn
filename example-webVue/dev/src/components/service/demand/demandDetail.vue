@@ -1,0 +1,112 @@
+<template>
+  <div id='customerDetail'>
+    <el-tabs v-model="activeName"
+             @tab-click="handleClick">
+      <el-tab-pane label="基础信息"
+                   name="baseInfo">
+        <baseInfo ></baseInfo>
+      </el-tab-pane>
+      <el-tab-pane label="注册信息"
+                   name="register"
+                   class='marrl-5' v-if="uid">
+        <regInfo  ref="regInfo"></regInfo>
+      </el-tab-pane>
+      <el-tab-pane label="跟进情况"
+                   name="follow"
+                   class='marrl-5' v-if="cid">
+        <followInfo  ref="followInfo"></followInfo>
+      </el-tab-pane>
+    </el-tabs>
+  </div>
+</template>
+  
+<script>
+import baseInfo from './baseinfo.vue'
+import regInfo from 'common/reg-info.vue'
+import followInfo from 'common/follow.vue'
+
+export default {
+  data() {
+    return {
+      activeName: 'baseInfo'
+    }
+  },
+  methods: {
+    handleClick(tab, event) {
+      let data = {
+        query: { ...this.$route.query, index: this.activeName }
+      }
+      router.push(data)
+      this.handleRouteFetch(tab.name)
+    },
+    init() {
+      if (this.$route.query.index) {
+        this.activeName = this.$route.query.index
+      }
+      this.handleRouteFetch(this.activeName)
+    },
+    handleRouteFetch(name) {
+      switch (name) {
+        case 'register':
+          this.$refs.regInfo.getCustomerInfo()
+          break
+        case 'follow':
+          this.$refs.followInfo.getData()
+          break
+        default:
+          break
+      }
+    }
+  },
+  computed: {
+    cid() {
+      return this.$route.query.dsu_id && this.$route.query.dsu_id != 0
+    },
+    uid() {
+      return this.$route.query.userid != 0
+    }
+  },
+  mounted() {
+    this.init()
+  },
+  components: {
+    regInfo,
+    baseInfo,
+    followInfo
+  }
+}
+</script>
+
+<style type="text/css">
+#customerDetail .el-tabs__item {
+  border: 1px solid #d3dce6;
+  border-bottom: 0px;
+  border-radius: 5px;
+  margin-right: 8px;
+}
+
+#customerDetail .el-tabs__active-bar {
+  display: none;
+}
+
+#customerDetail .num {
+  display: inline;
+  position: absolute;
+  height: 25px;
+  z-index: 99;
+  line-height: 25px;
+  width: 25px;
+  font-size: 12px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0px 0px 5px #888888;
+  text-align: center;
+  color: #fff;
+  background: #20a0ff;
+}
+
+#customerDetail .record-num {
+  top: 12px;
+  left: 205px;
+}
+</style>

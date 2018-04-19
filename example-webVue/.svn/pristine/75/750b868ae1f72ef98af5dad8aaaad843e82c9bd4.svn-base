@@ -1,0 +1,396 @@
+<template>
+<div>
+  <el-row :gutter="24" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+    <el-col :span="3">
+    <router-link  class="btn-link-large add-btn" to="newsAdd">
+      <i class="el-icon-plus"></i>&nbsp;&nbsp;添加
+    </router-link>
+    </el-col>
+    <el-col :span="3" :offset="11">
+        <el-select v-model="type" @change="select()">
+          <el-option
+            v-for="item in options"
+            :label="item.label"
+            :value="item.type">
+          </el-option>
+        </el-select>
+    </el-col>
+    <el-col :span="3" >
+            <el-select v-model="status"  @change="select()">
+             <el-option
+              v-for="item in options1"
+              :label="item.label"
+              :value="item.status">
+             </el-option>
+            </el-select>
+           </el-col>
+    <el-col :span="4">
+        <el-input placeholder="请输入快讯标题搜索" v-model="keyword">
+          <el-button slot="append" icon="search" @click="select()"></el-button>
+        </el-input>
+    </el-col>
+  </el-row>
+  <el-table class='m-w-1280 m-t-20'
+    ref="t1"
+     :data="tableData"
+     @sort-change="sorts"
+     @selection-change="handleSelectionChange">
+      <el-table-column
+        type="selection"
+        v-if='isMDel'
+        :reserve-selection=true
+        :selectable='isSelect'
+        width="55">
+      </el-table-column>
+     <el-table-column
+       label="序号"
+       >
+       <template scope="scope">
+         <span>{{ scope.row.num }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column label="分类" >
+     <template scope="scope">
+          <span>{{ scope.row.type}}</span>
+        </template>
+     </el-table-column>
+     <el-table-column
+       label="封面"
+       >
+       <template scope="scope">
+        <img :src='scope.row.img_url'/>
+       </template>
+     </el-table-column>
+     <el-table-column
+        label="快讯标题">
+        <template scope="scope">
+          <span @click="watch(scope.row.id)" class="now">{{ scope.row.title}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="来源"
+        min-width="100"
+        show-overflow-tooltip>
+        <template scope="scope">
+          <span>{{ scope.row.source}}</span>
+        </template>
+      </el-table-column>
+     <el-table-column
+       label="状态"
+       >
+       <template scope="scope">
+         <span>{{ scope.row.status}}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="创建时间"
+       >
+       <template scope="scope">
+         <span>{{ scope.row.create_time }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="点击量"
+       >
+       <template scope="scope">
+         <span>{{ scope.row.hits }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column
+       label="排序"
+        sortable="false" prop="sort">
+       <template scope="scope">
+         <span>{{ scope.row.sort }}</span>
+       </template>
+     </el-table-column>
+     <el-table-column >
+      <template scope="scope">
+      <router-link 
+          :to="{ name: 'infoNewsEdit', params: { id: scope.row.id }}" 
+          class="btn-link edit-btn"
+          v-show='scope.row.editbtnStatus'>
+           编辑
+        </router-link>
+        <el-button
+          size="small"
+          type="danger"
+          v-show='scope.row.delbtnStatus'
+          @click="handleDelete( scope.row)">删除
+        </el-button>
+        <el-button
+          size="small"
+          type="success"
+          v-show='scope.row.passbtnStatus'
+          @click="passed(scope.$index, scope.row)">通过
+        </el-button>
+        <el-button
+          size="small"
+          type="warning"
+          v-show='scope.row.unpassbtnStatus'
+          @click="unpassed(scope.$index, scope.row)">不通过
+        </el-button>
+      </template>
+    </el-table-column>
+  </el-table>
+   <div class="pos-rel p-t-20" v-show="isPage">
+    <div class="block pages m-b-10">
+      <el-pagination
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+      layout="total, sizes, prev, pager, next, jumper"
+      :page-sizes="[15, 30, 50, 100]"
+      :page-size="pageSize"
+      :current-page="currentPage"
+      :total="dataCount">
+      </el-pagination>
+    </div>
+  </div>
+  <newsWatch ref="newsWatch" :info="form"></newsWatch>
+  <div class="fl">
+    <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+    <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+  </div>
+</div>
+</template>
+<style>
+ .el-table .cell img{
+  width: 50px;
+  height: 50px;
+ }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import newsWatch from './news_watch.vue'
+  import sortData from '../../../assets/js/data'
+  import Vue from 'vue'
+  export default {
+    watch: {
+      '$route'(to, from) {
+        var self = this
+        self.init()
+      }
+    },
+    methods: {
+      select() {
+        var self = this
+        router.push({ path: '/data/info/news', query: { page: self.currentPage, pagesize: self.pageSize, keyword: self.keyword, type: self.type, status: self.status, sort: self.sort }})
+      },
+      init() {
+        this.fullscreenLoading = true
+        var self = this
+        if (self.$route.fullPath == '/data/info/news') {
+          self.currentPage = 1
+          self.pageSize = 15
+          self.keyword = ''
+          self.type = ''
+          self.status = ''
+          self.sort = ''
+        } else {
+          self.currentPage = self.$route.query.page * 1
+          self.pageSize = self.$route.query.pagesize * 1
+          self.keyword = self.$route.query.keyword
+          self.type = self.$route.query.type
+          self.status = self.$route.query.status
+          self.sort = self.$route.query.sort
+        }
+        self.getData()
+      },
+      watch(id) {
+        this.$refs.newsWatch.open(id)
+      },
+      getData() {
+        this.apiGet('news?page=' + this.currentPage + '&pagesize=' + this.pageSize + '&keyword=' + encodeURI(this.keyword) + '&type=' + this.type + '&status=' + this.status + '&sort=' + this.sort).then((res) => {
+          this.fullscreenLoading = false
+          if (res.data.list.length > 0) {
+            this.isPage = true
+          }
+          if (res.code == 200) {
+            console.log(res.data)
+            let data = {}
+            this.tableData = _(res.data.list).forEach((val, key) => {
+              if (val.img_url) {
+                val.img_url = window.imgUrl + val.img_url
+              }
+              val = sortData.sortStatus(val)
+            })
+            this.dataCount = res.data.total_num
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      passed(index, item) {
+        // 通过
+        this.apiPut('news/' + item.id + '/pass', '').then((res) => {
+          if (res.code == 200) {
+            let newItem = sortData.passStauts(res.data, item)
+            Vue.set(this.tableData, index, newItem)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      unpassed(index, item) {
+        // 不通过
+        this.apiPut('news/' + item.id + '/failed', '').then((res) => {
+          if (res.code == 200) {
+            let newItem = sortData.unpassStauts(res.data, item)
+            Vue.set(this.tableData, index, newItem)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      sorts() {
+        if (this.x % 2 == 0) {
+          this.sort = 2
+          this.select()
+          this.x ++
+        } else {
+          this.sort = 1
+          this.select()
+          this.x ++
+        }
+      },
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.select()
+      },
+      handleDelete(item) {
+        this.$confirm('确认删除?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('news/', item.id).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          })
+        })
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        this.currentPage = 1
+        this.select()
+        // console.log(`每页 ${val} 条`)
+      },
+      isSelect(row, index) {
+        // console.log(row.delbtnStatus)
+        if (row.delbtnStatus == true) {
+          return true
+        } else {
+          return false
+        }
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      sureDel() {
+        console.log(JSON.stringify(this.delList))
+        let asd = {
+          delList: this.delList
+          // delList: this.delList
+        }
+        // asd.push(asd)
+        console.log(asd)
+        if (this.delList.length == 0) {
+          _g.toastMsg(this, 'warning', '请选择删除项')
+        } else {
+          console.log(asd)
+          this.apiPost('news/destroy', asd).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              this.getData()
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+          this.isMDel = false
+        }
+        // console.log((this.delList))
+      },
+      cancelDel() {
+        this.$refs.t1.clearSelection(this.tableData)
+        this.isMDel = false
+      },
+      handleSelectionChange(val) {
+        this.delList = []
+        _(val).forEach((res, key) => {
+          this.delList.push(res.id)
+        })
+      }
+    },
+    data() {
+      return {
+        fullscreenLoading: false,
+        isMDel: false,
+        delList: [],
+        pageSize: 15,
+        sort: null,
+        x: 1,
+        options: [{
+          type: '',
+          label: '全部分类'
+        }, {
+          type: '1',
+          label: '经典案例'
+        }, {
+          type: '2',
+          label: '平台动态'
+        }, {
+          type: '3',
+          label: '活动资讯'
+        }, {
+          type: '4',
+          label: '行业资讯'
+        }],
+        keyword: '',
+        tableData: [],
+        currentPage: 1,
+        type: '',
+        isPage: false,
+        dataCount: null,
+        refuse: false,
+        status: null,
+        options1: [{
+          status: '',
+          label: '全部状态'
+        }, {
+          status: '1',
+          label: '待审核'
+        }, {
+          status: '2',
+          label: '已上架'
+        }, {
+          status: '3',
+          label: '已下架'
+        }, {
+          status: '4',
+          label: '已上架(同意)'
+        }, {
+          status: '5',
+          label: '已下架(同意)'
+        }, {
+          status: '6',
+          label: '不通过'
+        }]
+      }
+    },
+    created() {
+      this.init()
+    },
+    components: {
+      newsWatch
+    },
+    mixins: [http]
+  }
+</script>

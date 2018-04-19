@@ -1,0 +1,1161 @@
+<template>
+  <div class="customerData">
+    <el-form :inline="true" :model="form" label-width="100px">
+      <div class='base-info-cont'>
+        <el-row>
+          <el-col :span="24"><div class="m-b-20 base-title">基本信息</div></el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="7">
+             <el-form-item label="需求方编号：">
+               <div>{{ form.code }}</div>
+             </el-form-item>
+          </el-col>
+          <el-col :span="7">
+             <el-form-item label="注册时间：">
+               <div>{{ form.create_time }}</div>
+             </el-form-item>
+          </el-col>
+          <el-col :span="7">
+            <el-form-item label="来源：">
+              <div>{{ form.source }}</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="3">
+            <el-form-item class="uphead h-100" style="margin-bottom: 0px;">
+              <el-upload
+                :before-upload="beforeAvatarUpload"
+                :action="uploadUrl"
+                :on-success="uploadSuccess"
+                :on-error="uploadFail"
+                :default-file-list="fileList" v-if="!isEdit" class="headImg w-100  h-100 ">
+                <el-button type="text" size='mini'>
+                  <div class="w-60">
+                    <img :src="imgSrc" alt="head" class="headImg w-100  h-100">
+                  </div>
+                </el-button>
+              </el-upload>
+              <el-button type="text" size='mini' v-else>
+                  <div cLass="w-40">
+                    <img :src="imgSrc" alt="head" class="headImg">
+                  </div>
+              </el-button>
+              <div slot="tip" class="el-upload__tip">上传公司标识</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row>
+          <el-col :span="7">
+            <el-form-item label="公司名称：" prop="name" :rules="[
+        { required: true, message: '公司名称不能为空'}]">
+              <el-input v-model="form.name" :disabled="isEdit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="7">
+            <el-form-item label="登录账号：" prop="account" :rules="[
+        { required: true, message: '登录账号不能为空'}]">
+              <!-- <div>{{ form.account }}</div> -->
+              <el-input v-model="form.account" :disabled="isEdit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="7">
+            <el-form-item label="密码：">
+              <el-button v-if='!isClick' v-show='!isEdit' @click='ifReset'>重置登录密码</el-button>
+              <el-input v-model="form.password" :disabled="isEdit" v-else></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row class="m-t-20">
+          <el-col :span="7">
+            <el-form-item label="公司电话：">
+              <el-input v-model="form.mobile" :disabled="isEdit"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="7">
+            <el-form-item label="公司人数：">
+              <el-input v-model="form.size" v-if="isEdit" disabled="true"></el-input>
+              <el-select v-model="form.size" placeholder="请选择公司人数" class='w-150' v-if="!isEdit">
+                <el-option
+                  v-for="item in people"
+                  :label="item.account"
+                  :value="item.account">
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span='8'>
+            <el-form-item label="公司地址：">
+              <el-row type='flex' justify='start'>
+                <div>
+                  <el-cascader
+                    :options="proCityList"
+                    v-model="proCityVal"
+                    @change="handleChangeCity" v-if="!isEdit">
+                  </el-cascader>
+                  <el-input v-model="proCityVal1" :disabled="true" v-else></el-input>
+                </div>
+                <div>
+                  <el-input class='m-l-15' v-model="address" placeholder="请输入详细地址" v-if="!isEdit"></el-input>
+                  <el-input class='m-l-15' v-model="address" :disabled="true" v-else></el-input>
+                </div>
+              </el-row>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="14">
+            <el-form-item label="公司简介："  class='desp'>
+              <el-input type="textarea" class="textA" v-model="form.remark" :disabled="isEdit"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row  :gutter="24" type='flex' justify='start' align='bottom' class="contact m-b-30 w-1000">
+          <el-col :span="2"  class="textalign_rigt">银行卡</el-col>
+          <el-col :span="18">
+            <el-table
+              :data="bank"
+              border
+              style="width: 800px">
+              <el-table-column
+                label="开户行" >
+                <template scope="scope">
+                  <el-input v-model="scope.row.bank_name" placeholder="请输入开户行" :disabled="isEdit"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="账号">
+                <template scope="scope">
+                  <el-input v-model="scope.row.bank_account" placeholder="请输入账号" :disabled="isEdit"></el-input>
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="户名">
+                <template scope="scope">
+                  <el-input v-model="scope.row.bank_user" placeholder="请输入户名" :disabled="isEdit"></el-input>
+                </template>
+              </el-table-column>
+            </el-table>
+            </el-col>
+        </el-row>
+
+      </div>
+    </el-form>
+    
+    <div class='base-info-cont'>
+    <div class="m-b-25 m-t-10">
+    <category ref="category"
+                :type="categoryMode"
+                v-if="categoryVisible"
+                :handleSubmit="addCategory"
+                :handleEdit="editCategory"
+                :sourceData="categoryData">
+    </category>
+    <div class=" p-a-20 m-t-10 w-100p m-l-0" style="border-bottom: solid 1px #BFCBD9"><div><p style="line-height:10px;margin-left:10px"><span style="color: red">*</span>营业品类</p></div></div>
+      <div class="inline-block c-36 w-800 m-b-20 m-t-20" style="margin-left:80px">
+        <el-table border
+                  style="width: 100%"
+                  class="inline-block"
+                  :data="form.business_category">
+          <el-table-column
+                           label="专长排序">
+            <template scope="scope">
+              <span>{{ scope.row.index}}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="category"
+                           label="品类"
+                           min-width="350">
+            <template scope="scope">
+              <el-tree :data="scope.row.data"
+                       :props="defaultProps"></el-tree>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作"
+                           width="100">
+            <template scope="scope">
+              <a class="c-blue"
+                 @click="openCategoryDialog(scope.$index)" v-if="!isEdit">编辑</a>
+              <a class="c-blue"
+                 @click="removeCategory(scope.$index)" v-if="!isEdit">删除</a>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+        <el-button type="text" size="mini" @click.prevent="openCategoryDialog()" class='m-l-5' v-if="!isEdit">+添加品类</el-button>
+    </div>
+    </div>
+    <div style="margin-top: 15px;" class='base-info-cont'>
+    <div class="m-b-25 m-t-20">
+    <contact ref="contact" 
+      :sourceData="contactForm"
+      :type="openType"
+      :handleSubmit="addContact"
+      :handleEdit="editContact"
+      v-if="contactVisible"> </contact>
+    <div class="bor-b-3e p-a-20 w-100p " style="border-bottom: solid 1px #BFCBD9"> <p style="line-height:10px;margin-left:10px"><span style="color: red">*</span>联系人</p></div>
+      <div class="inline-block c-36 w-800 m-b-20 m-t-20" style="margin-left:80px">
+        <el-table :data="contactList"
+                  border
+                  class="inline-block"
+                  style="width: 100%">
+          <el-table-column prop="name"
+                           label="名字"
+                           width="100"
+                           header-align="center"
+                           class-name="tx-c">
+          </el-table-column>
+          <el-table-column prop="position"
+                           width="125"
+                           label="职位"
+                           header-align="center"
+                           class-name="tx-c">
+          </el-table-column>
+          <el-table-column prop="phone"
+                           width="150"
+                           label="手机号"
+                           header-align="center"
+                           class-name="tx-c">
+          </el-table-column>
+          <el-table-column prop="email"
+                           label="邮箱"
+                           min-width="150"
+                           header-align="center"
+                           class-name="tx-c">
+          </el-table-column>
+          <el-table-column prop="weixin"
+                           label="微信"
+                           width="100"
+                           header-align="center"
+                           class-name="tx-c">
+            <template scope="scope">
+              <i @click="openwx(scope.row)"
+                 class="fa fa-qrcode fz-24 vr-m pointer"></i>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作"
+                           width="140"
+                           header-align="center">
+            <template scope="scope">
+              <a class="c-blue"
+                 @click="editPhone(scope.$index)" v-if="!isEdit&&!scope.row.is_bind">绑定</a>
+              <a class="c-blue"
+                 @click="editPhone(scope.$index)" v-if="!isEdit&&scope.row.is_bind">已绑定</a>
+              <a class="c-blue"
+                 @click="openContactDialog(scope.row)" v-if="!isEdit">编辑</a>
+              <a class="c-blue"
+                 @click="removeContact(scope.$index)" v-if="!isEdit">删除</a>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <el-button type="text" size="mini" @click.prevent="openContactDialog()" class='m-l-5' v-if="!isEdit">+添加联系人</el-button>
+    </div>
+    <phones ref="phones"> </phones>
+    </div>
+<weixin ref="weixin"></weixin>
+    <div style="margin-top: 15px;" class='base-info-cont'>
+      <div class="m-b-25 m-t-20">
+          <div class="m-b-25 m-t-20">
+            <div class="bor-b-3e p-a-20 w-100p" style="border-bottom: solid 1px #BFCBD9"> <p style="line-height:10px;margin-left:10px">公司证照</p>&nbsp;&nbsp;<el-checkbox v-model="checked" class="clor-5e" :checked="checked" :disabled="isEdit">已认证</el-checkbox></div>
+            <div class="inline-block c-36 w-800 m-b-20 m-t-20" style="margin-left:80px">
+              <el-table border
+                        :data="Credentials"
+                        class="inline-block"
+                        style="width: 100%">
+                <el-table-column prop="type"
+                                 label="文件类型">
+                </el-table-column>
+                <el-table-column prop="data_name"
+                                 label="文件名">
+                </el-table-column>
+                <el-table-column
+              prop="create_time"
+              label="上传时间"
+              width="180">
+            </el-table-column>
+            <el-table-column label="说明">
+              <template scope="scope">
+                <el-col :span="24"> 
+                  <!-- <el-input v-model="scope.row.introduction" placeholder="请输入内容" :disabled="isEdit"></el-input> -->
+                  <span>{{ scope.row.introduction}}</span>
+                </el-col>
+              </template>
+            </el-table-column>
+                <el-table-column label="操作">
+                  <template scope="scope">
+                    <a class="c-blue"
+                       :href="imgUrl + scope.row.path"
+                       download
+                       v-if="scope.row.path&&!isEdit" @click='downed(scope.row.path)'>下载</a>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+            <el-button type="text" size="mini" @click="uploadFile" class='m-l-5' v-if="!isEdit">+添加上传</el-button>
+            <upload ref="upload"></upload>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+  .customerData  .uphead .el-upload-list{
+    display: none;
+  }
+  .customerData .el-form--inline .el-form-item{
+    display: block;
+    /*margin-right: 30px;*/
+  }
+  .customerData .el-input{
+    display: block;
+  }
+  /*.customerData .el-col-7,.customerData .el-col-8{
+    margin-bottom: 20px;
+  }*/
+  .customerData .el-select{
+    width: 48%;
+  }
+  .customerData .base-info {
+    background-color: #66CCFF;
+    width: 100%;
+    height: 30px;
+    line-height: 30px; 
+    font-size: 14px;
+    text-indent: 10px;
+  }
+  .customerData .customer-info {
+    background-color: #ccc;
+    width: 100%;
+    height: 25px;
+    line-height: 25px; 
+    font-size: 14px;
+    border: #E0E6ED;
+    text-indent: 10px;
+  }
+  .customerData .base-info-cont{
+    border:1px solid #BFCBD9; 
+    border-radius:3px; 
+    margin-bottom:10px;
+  }
+  .customerData .base-title{
+    padding: 5px 0px;
+    text-align: left;
+    text-indent: 10px;
+    border-bottom: 1px solid #BFCBD9;
+  }
+  .customerData .add-content {
+    color: #66CCFF;
+    cursor: pointer;
+    position: absolute;
+    top: 72px; 
+    left: 35%;
+  }
+  .customerData .realse {
+    color: #66CCFF;
+    cursor: pointer;
+    margin-left: 15px;
+  }
+  .m-l-1 {
+    margin-left: 1%;
+  }
+  .uphead .el-upload__files{
+    display: none;
+  }
+  .textA .el-textarea__inner{
+    height: 100px;
+  }
+  .textB .el-textarea__inner{
+    width: 34%;
+    height: 100px;
+  }
+  .customerData .lineh-36{
+    line-height: 36px;
+  }
+  .customerData .underline{
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+  import address from '../../../assets/js/city-data.json'
+  import http from '../../../assets/js/http'
+  import staff from './staff.vue'
+  import upload from './upload.vue'
+  import category from '../../common/dialog/category.vue'
+  import contact from '../../common/contact.vue'
+  import phones from './phones.vue'
+  import weixin from './weixin.vue'
+  import _ from 'lodash'
+  export default {
+    data() {
+      return {
+        currentCategoryIndex: null,
+        categoryMode: null,
+        wxurl: null,
+        isClick: false,
+        contactVisible: false,
+        contactForm: null,
+        index: 0,
+        categoryVisible: false,
+        defaultProps: {
+          children: 'child',
+          label: 'name'
+        },
+        people: [{
+          account: '0-100'
+        }, {
+          account: '100-300'
+        }, {
+          account: '300-500'
+        }, {
+          account: '500-1000'
+        }, {
+          account: '>1000'
+        }],
+        imgUrl: window.imgUrl,
+        isLoading: false,
+        head: require('../../../assets/images/head.png'),
+        status: '',
+        customerStatus: '',
+        is_status: '',
+        openType: '',
+        efficientStatus: false,
+        invalidStatus: false,
+        checked: false,
+        cus_id: null,
+        proCityList: address,
+        proCityVal: [],
+        isInfo: true,
+        proCityVal1: [],
+        category: [],
+        contact: [],
+        firstStep: false,
+        Credentials: [],
+        fileType: [{
+          label: '营业执照',
+          status: '1'
+        }, {
+          label: '企业资质',
+          status: '2'
+        }, {
+          label: '获奖证明',
+          status: '3'
+        }, {
+          label: '其他',
+          status: '4'
+        }],
+        province: '',
+        area: '',
+        address: '',
+        city: '',
+        source: '',
+        form: {
+          create_time: null,
+          name: '',
+          num: '',
+          account: '',
+          source: '',
+          password: '',
+          type: '',
+          mobile: '',
+          size: '',
+          remark: '',
+          business_category: [],
+          index: null
+        },
+        bank: [{
+          bank_user: '',
+          bank_account: '',
+          bank_name: ''
+        }],
+        contactList: [],
+        options: [{
+          value: '选项1',
+          label: 'A热门客户'
+        }, {
+          value: '选项2',
+          label: 'B普通客户'
+        }, {
+          value: '选项3',
+          label: 'C潜在客户'
+        }, {
+          value: '选项4',
+          label: 'D无法沟通'
+        }],
+        value: '',
+        customerData: [],
+        input: '',
+        // editPhoneShow: false,
+        // editPhoneTitle: '操作提醒',
+        text: '',
+        sturdyData: [],
+        followPeople: [],
+        level: '',
+        del_contact_list: [],
+        follow_people: [],
+        del_data_situation: [],
+        is_saleClose: false,
+        is_serviceClose: false,
+        is_pushClose: false,
+        match: '',
+        del_follow_record: [],
+        new__follow_record: [],
+        cancel_release: '释放',
+        is_release: true,
+        isFirst: true,
+        uploadData: [],
+        isEdit: true,
+        show: Lockr.get('authList'),
+        follow_num: '',
+        uploadUrl: '',
+        fileList: [],
+        logo: '',
+        imgSrc: '',
+        path: ''
+      }
+    },
+    // watch: {
+      // proValue(val, oldVal) {  // 监听省份的选择，以更新城市选项
+      //   var self = this
+      //   // self.cityValue = ''
+      //   self.cityOptions = address['city'][val]
+      //   self.proValue = val
+      //   if (!self.isFirst) {
+      //     self.cityValue = ''
+      //   } else {
+      //     self.isFirst = false
+      //   }
+      // },
+      // value(val) { // 监听客户级别的选择，并赋予level
+      //   var self = this
+      //   switch (val) {
+      //     case '选项1': self.level = 1
+      //       break
+      //     case '选项2': self.level = 2
+      //       break
+      //     case '选项3': self.level = 3
+      //       break
+      //     case '选项4': self.level = 4
+      //       break
+      //   }
+      // },
+      // customerStatus(val) { // 监听客户状态
+      //   var self = this
+      //   if (val == '有效') {
+      //     self.is_status = 1
+      //   } else if (val == '无效') {
+      //     self.is_status = 0
+      //   } else {
+      //     self.is_status = null
+      //   }
+      // }
+    // },
+    methods: {
+      // goback() {
+      //   router.push({ path: this.list_path })
+      // },
+      openwx(row) {
+        console.log(row)
+        this.wxurl = row.qrcode
+        console.log(this.wxurl)
+        this.$refs.weixin.open(this.wxurl)
+      },
+      ifReset() {
+        this.isClick = true
+      },
+      downed(url) {
+        console.log(imgUrl + url)
+      },
+      removeCategory(index) {
+        console.log(this.form.business_category[index])
+        let key = this.form.business_category[index].key
+        let id = this.$route.params.id
+        // console.log(key)
+        this.apiDelete(`demand_user/${id}/category/`, key)
+        .then(res => {
+          if (res.code == 200) {
+            this.form.business_category.splice(index, 1)
+          } else {
+            this.$message.error('删除失败')
+          }
+        })
+      },
+      flagTrans(val) {
+        return _.includes(this.postArr, val)
+      },
+      setCategory(arr) {
+        // this.form.index = sort
+        // let index = this.currentCategoryIndex
+        // if (typeof index === 'number') {
+        //   this.$set(this.form.category, index, arr)
+        // } else {
+        //   this.form.category.push(arr)
+        // }
+        console.log(arr)
+        this.form.business_category.push(arr)
+        console.log('2')
+        console.log(arr)
+        console.log(this.form.business_category)
+        // this.categoryVisibility = false
+      },
+      openCategoryDialog(index = null) {
+        console.log(index)
+        if (index || typeof index === 'number') {
+          this.categoryMode = 'edit'
+          this.categoryData = this.form.business_category[index]
+          console.log(this.categoryData)
+        } else {
+          this.categoryMode = 'add'
+          this.categoryData = { id: null, child: [] }
+        }
+        this.currentCategoryIndex = index
+        this.categoryVisible = true
+        this.$nextTick(() => {
+          this.$refs.category.render()
+        })
+      },
+      addCategory(data) {
+        let uid = this.$route.params.id
+        console.log(data)
+        this.apiPost(`demand_user/${uid}/category`, data)
+        .then(res => {
+          if (res.code !== 200) {
+            return this.$message.error(res.error)
+          }
+          // debugger
+          console.log(res.data)
+          let categorys = this.form.business_category
+          // console.log('111')
+          let data = [{ ...res.data }]
+          console.log(data)
+          categorys.push({ index: categorys.length + 1, ...res.data, data })
+          // console.log('222')
+          console.log(this.form.business_category)
+          this.$refs.category.destory()
+          // console.log('333')
+        })
+      },
+      editCategory(data) { // 编辑品类
+        let index = this.currentCategoryIndex
+        let categorys = this.form.business_category
+        let { key } = categorys[index].data[0]
+        let uid = this.$route.params.id
+        this.apiPut(`demand_user/${uid}/category/`, key, data)
+          .then(res => {
+            if (res.code !== 200) {
+              return this.$message.error(res.error)
+            }
+            let data = [{ ...res.data }]
+            this.$set(categorys, index, { index: index + 1, ...res.data, data })
+            this.$refs.category.destory()
+            this.$message.success('保存成功')
+          })
+      },
+      openContactDialog(contact = null) { // 打开联系人对话框
+        // console.log(row.is_bind)
+        if (contact) {
+          this.openType = 'edit'
+          this.contactForm = contact
+        } else {
+          this.openType = 'add'
+          this.contactForm = {}
+        }
+        this.contactVisible = true
+        this.$nextTick(() => this.$refs.contact.toggle())
+      },
+      beforeAvatarUpload(file) {
+        var self = this
+        if (self.isEdit) {
+          _g.toastMsg(self, 'warning', '您没有上传头像的权限！')
+        }
+        return !self.isEdit
+      },
+      handleChangeCity(val) {
+        this.province = val[0]
+        this.city = val[1]
+        this.area = val[2]
+      },
+      uploadFail(err, res, file) { // 头像上传失败
+        var self = this
+        _g.toastMsg(self, 'warning', '上传失败！')
+        // console.log('err = ', _g.j2s(err))
+        // console.log('res = ', _g.j2s(res))
+      },
+      removeContact(index) { // 删除联系人
+        var self = this
+        this.apiDelete('demand_user/' + self.dsu_id + '/contacts/' + this.contactList[index].id).then((res) => {
+          if (res.code == 200) {
+            console.log('删除成功')
+            self.contactList.splice(index, 1)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      editContact(contact) { // 编辑联系人
+        let { id } = contact
+        let params = { ...contact }
+        let dsu_id = this.$route.params.id
+        this.apiPut(`demand_user/${dsu_id}/contacts/`, id, params)
+          .then(res => {
+            if (res.code !== 200) {
+              return this.$message.error(res.error)
+            }
+            this.$refs.contact.destory()
+            _g.toastMsg(this, 'success', '编辑成功')
+            let index = _.findIndex(this.contactList, item => item.id == id)
+            this.$set(this.contactList, index, { ...res.data })
+          })
+      },
+      uploadSuccess(res, file, fileList) { // 头像上传成功
+        var self = this
+        if (fileList.length == 2) {
+          fileList.shift()
+        }
+        self.fileList = fileList
+        self.imgSrc = imgUrl + self.fileList[0].response.data
+        _g.toastMsg(self, 'success', '上传成功！')
+        // console.log('self.fileList = ', _g.j2s(self.fileList))
+        // console.log('res = ', _g.j2s(res))
+      },
+      editPhone(index) {
+        // this.firstStep = true
+        // this.editPhoneShow = true
+        console.log(this.contactList[index])
+        if (this.contactList[index].is_bind == 1) {
+          return
+        }
+        this.$refs.phones.open(this.contactList[index].phone, this.contactList[index].id)
+      },
+      // addRecord() { // 添加跟进说明
+      //   var self = this
+      //   if (self.text) {
+      //     var temp = {
+      //       content: self.text,
+      //       name: Lockr.get('userInfo').u_realname,
+      //       create_time: _g.getDatetime(),
+      //       type: true
+      //     }
+      //     self.sturdyData.push(temp)
+      //     self.text = ''
+      //   } else {
+      //     _g.toastMsg(self, 'warning', '请填写跟进说明！')
+      //   }
+      // },
+      addData(form) { // 添加客户上传资料的情况
+        var self = this
+        var id = self.$route.params.id
+        form.data_name = form.name
+        form.introduction = form.desc
+        // form.path = form.fileList[0].url
+        console.log(form)
+        self.apiPost(`demand_user/${id}/record`, form)
+          .then(res => {
+            if (res.code == 200) {
+              console.log(res.data)
+              var typeName = form.type
+              // if (form.type == 0) {
+              //   typeName = '营业执照'
+              // } else if (form.type == 1) {
+              //   typeName = '企业资质'
+              // } else if (form.type == 2) {
+              //   typeName = '获奖证明'
+              // } else if (form.type == 3) {
+              //   typeName = '其他'
+              // }
+              self.Credentials.push({
+                data_name: form.name,
+                type: typeName,
+                create_time: _g.getDatetime(),
+                introduction: form.desc,
+                path: form.fileList[0].response.data,
+                showPath: imgUrl + form.fileList[0].response.data
+              })
+            } else {
+              this.$refs.upload.isLoading = false
+              _g.dealError(this, res)
+            }
+          })
+      },
+      // onChildChange(res) { // 获取选择的跟进人员
+      //   var self = this
+      //   self.followPeople = []
+      //   self.followPeople = res
+      //   // console.log('self.followPeople=' + _g.j2s(self.followPeople))
+      // },
+      uploadFile() {
+        var x = 'demand'
+        this.$refs.upload.open(x)
+      },
+      addContact(contact) { // 添加联系方式
+        let params = { ...contact }
+        var dsu_id = this.$route.params.id
+        this.apiPost(`demand_user/${dsu_id}/contacts`, params)
+          .then(res => {
+            if (res.code !== 200) {
+              return this.$message.error(res.error)
+            }
+            // this.$refs.contact.destory()
+            _g.toastMsg(this, 'success', '添加成功')
+            this.contactList.push(res.data)
+          })
+      },
+      // deleteRow(item, index, str) { // 删除
+      //   var self = this
+      //   self.$confirm('确认删除?', '提示', {
+      //     confirmButtonText: '确定',
+      //     cancelButtonText: '取消',
+      //     type: 'warning'
+      //   }).then(() => {
+      //     if (str == 'contactList') {
+      //       self.del_contact_list.push(item[index].id)
+      //     } else if (str == 'customerData') {
+      //       self.del_data_situation.push(item[index].id)
+      //     } else if (str == 'sturdyData' && item[index].id) {
+      //       self.del_follow_record.push(item[index].id)
+      //     }
+      //     item.splice(index, 1)
+      //     _g.toastMsg(self, 'success', '删除成功')
+      //   }).catch(() => {
+      //     self.$message({
+      //       type: 'info',
+      //       message: '已取消删除'
+      //     })
+      //   })
+      // },
+      // release() { // 释放跟进人员
+      //   var self = this
+      //   var temp = ''
+      //   if (Lockr.get('authList') == null || self.show['publicClient_button']) {
+      //     self.is_saleClose = !self.is_saleClose
+      //     self.is_serviceClose = !self.is_serviceClose
+      //     self.is_pushClose = !self.is_pushClose
+      //     self.cancel_release = self.is_release ? '取消' : '释放'
+      //     self.is_release = !self.is_release
+      //   } else if (self.show['publicClient_view'] && (Lockr.get('roleType').group_id == 1 || Lockr.get('roleType').group_id == 2 || Lockr.get('roleType').group_id == 3)) {
+      //     for (var i = 0; i < self.followPeople.length; i++) {
+      //       if (Lockr.get('userInfo').u_realname == self.followPeople[i].name) {
+      //         temp = self.followPeople[i]
+      //       } else {
+      //         _g.toastMsg(self, 'warning', '您未跟进该客户！')
+      //         return
+      //       }
+      //     }
+      //     self.$confirm('确认释放?', '提示', {
+      //       confirmButtonText: '确定',
+      //       cancelButtonText: '取消',
+      //       type: 'warning'
+      //     }).then(() => {
+      //       self.followPeople.splice(self.followPeople.indexOf(temp), 1)
+      //       self.follow_num = self.follow_num - 1
+      //       _g.toastMsg(self, 'success', '释放成功')
+      //     }).catch(() => {
+      //       self.$message({
+      //         type: 'info',
+      //         message: '已取消释放'
+      //       })
+      //     })
+      //   } else {
+      //     _g.toastMsg(self, 'warning', '您未跟进该客户！')
+      //   }
+      // },
+      // closeTag(item) { // 删除跟进人员标签
+      //   var self = this
+      //   self.followPeople.splice(self.followPeople.indexOf(item), 1)
+      // },
+      getCustomerInfo() { // 获取客户信息
+        var self = this
+        self.apiGet('demand_user/' + self.cus_id).then((res) => {
+          console.log(res.data)
+          if (res.code != 200) {
+            _g.dealError(this, res)
+          } else {
+            self.form.name = res.data.name
+            if (res.data.source == 1) {
+              self.form.source = '注册'
+            } else {
+              self.form.source = '系统添加'
+            }
+            self.logo = res.data.logo
+            if (self.logo == 0) {
+              self.imgSrc = self.head
+            } else {
+              self.imgSrc = imgUrl + self.logo
+            }
+            // 处理省份城市
+            this.province = res.data.province || ''
+            this.city = res.data.city || ''
+            this.area = res.data.area || ''
+            this.address = res.data.address || ''
+            this.proCityVal = [this.province, this.city, this.area]
+            this.proCityVal1 = [this.province + '/' + this.city + '/' + this.area]
+            self.follow_num = res.data.follow_num
+            self.match = res.data.require
+            self.$emit('demandRecord', self.match) // 发送需求记录条数
+            self.form.code = res.data.code
+            // var x = res.data.split()
+            self.form.create_time = res.data.create_time
+            self.bank[0].bank_account = res.data.bank_account
+            self.bank[0].bank_user = res.data.bank_user
+            self.bank[0].bank_name = res.data.bank_name
+            res.data.business_category.forEach((item, index) => {
+              item.index = index + 1
+              item.data = [{ ...item }]
+            })
+            self.form.business_category = res.data.business_category
+            // self.form.bank_name = res.data.bank_name
+            // self.form.category[0] = res.data.business_category
+            console.log(self.form.business_category)
+            switch (res.data.level) {
+              case 1: self.value = 'A热门客户'
+                break
+              case 2: self.value = 'B普通客户'
+                break
+              case 3: self.value = 'C潜在客户'
+                break
+              case 4: self.value = 'D无法沟通'
+                break
+            }
+            self.proValue = res.data.province
+            self.cityValue = res.data.city
+            self.contactList = res.data.demandServiceContacts
+            self.form.mobile = res.data.phone
+            self.form.size = res.data.size
+            self.form.remark = res.data.remark
+            self.form.account = res.data.account
+            if (res.data.auth == 1) {
+              self.checked = true
+            } else {
+              self.checked = false
+            }
+            if (res.data.status == 1) {
+              self.customerStatus = '有效'
+            } else if (res.data.status == null) {
+              self.customerStatus = ''
+            } else {
+              self.customerStatus = '无效'
+            }
+            self.sturdyData = res.data.followRecord
+            // console.log('res.data.followRecord.length=' + res.data.followRecord.length)
+            // if (res.data.followPeople.length != 0) {
+            //   self.followPeople = res.data.followPeople
+            // }
+            // for (var m = 0; m < res.data.dataRecord.length; m++) {
+            //   res.data.dataRecord[i].data_name = res.data.dataRecord.name
+            // }
+            self.Credentials = res.data.dataRecord
+            console.log(self.Credentials)
+            for (var i = 0; i < self.Credentials.length; i++) {
+              self.Credentials[i].showPath = imgUrl + self.Credentials[i].path
+              console.log(self.Credentials[i].showPath)
+              // self.Credentials[i].remark = self.Credentials.introduction
+              if (self.Credentials[i].type == '0') {
+                self.Credentials[i].type = '营业执照'
+              } else if (self.Credentials[i].type == '1') {
+                self.Credentials[i].type = '企业资质'
+              } else if (self.Credentials[i].type == '2') {
+                self.Credentials[i].type = '获奖证明'
+              } else if (self.Credentials[i].type == '3') {
+                self.Credentials[i].type = '其他'
+              }
+            }
+          }
+        })
+      },
+      // selectStaff() { // 选择跟进人员
+      //   var self = this
+      //   if (Lockr.get('authList') == null || self.show['publicClient_button']) {
+      //     self.$refs.staff.open()
+      //   } else if (self.show['publicClient_view'] && (Lockr.get('roleType').group_id == 1 || Lockr.get('roleType').group_id == 2 || Lockr.get('roleType').group_id == 3)) {
+      //     for (var i = 0; i < self.followPeople.length; i++) {
+      //       if (Lockr.get('userInfo').u_id == self.followPeople[i].id) {
+      //         _g.toastMsg(self, 'warning', '您已跟进该客户！')
+      //         return
+      //       } else if (Lockr.get('roleType').title == self.followPeople[i].label) {
+      //         _g.toastMsg(self, 'warning', '该客户已有' + Lockr.get('roleType').title + '跟进！')
+      //         return
+      //       }
+      //     }
+      //     if (Lockr.get('userInfo').u_follow_num > self.follow_num) {
+      //       self.$confirm('确认跟进该客户?', '提示', {
+      //         confirmButtonText: '确定',
+      //         cancelButtonText: '取消',
+      //         type: 'warning'
+      //       }).then(() => {
+      //         self.followPeople.push({ label: Lockr.get('roleType').title, name: Lockr.get('userInfo').u_realname, id: Lockr.get('userInfo').u_id })
+      //         self.follow_num = self.follow_num + 1
+      //         // console.log(_g.j2s(self.followPeople))
+      //         _g.toastMsg(self, 'success', '跟进成功！')
+      //       }).catch(() => {
+      //         self.$message({
+      //           type: 'info',
+      //           message: '已取消跟进'
+      //         })
+      //       })
+      //     } else {
+      //       _g.toastMsg(self, 'warning', '跟进客户数已达到上限，请释放后再选择跟进！')
+      //     }
+      //   } else {
+      //     _g.toastMsg(self, 'warning', '只有销售人员、客服、地推才能跟进！')
+      //   }
+      // },
+      handleEdit(contactForm) {
+        _this.apiPost('demand_user/' + _this.cus_id + '/contacts', contactForm).then((res) => {
+          if (res.code == 200) {
+            console.log(res.data)
+            _this.$parent.contactList.push(res.data)
+            _this.toggle()
+          }
+        })
+      },
+      edit() { // 保存修改信息
+        this.isLoading = true
+        var self = this
+        // console.log('self.followRecordLength=' + self.followRecordLength)
+        // console.log(_g.j2s(self.sturdyData))
+        // console.log(_g.j2s(self.customerData))
+        // for (var j = 0; j < self.contactList.length; j++) {
+        //   if (!(/^1[34578]\d{9}$/.test(self.contactList[j].phone))) {
+        //     _g.toastMsg(self, 'warning', '请在第' + (j + 1) + '个手机号那填写有效的手机号码！')
+        //     return
+        //   }
+        // }
+        for (var s = 0; s < self.customerData.length; s++) {
+          if (self.customerData[s].id) {
+            self.uploadData.push({
+              id: self.customerData[s].id,
+              name: self.customerData[s].name,
+              type: self.customerData[s].type,
+              create_time: self.customerData[s].create_time,
+              remark: self.customerData[s].remark,
+              path: self.customerData[s].path,
+              introduction: self.customerData[s].introduction
+            })
+          } else {
+            self.uploadData.push({
+              name: self.customerData[s].name,
+              type: self.customerData[s].type,
+              create_time: self.customerData[s].create_time,
+              remark: self.customerData[s].remark,
+              path: self.customerData[s].path,
+              introduction: self.customerData[s].introduction
+            })
+          }
+        }
+        // for (var k = 0; k < self.sturdyData.length; k++) {
+        //   if (self.sturdyData[k].type) {
+        //     var temp = {
+        //       content: self.sturdyData[k].content,
+        //       name: self.sturdyData[k].name,
+        //       create_time: self.sturdyData[k].create_time
+        //     }
+        //     self.new__follow_record.push(temp)
+        //   }
+        // }
+        for (var i = 0; i < self.followPeople.length; i++) {
+          self.follow_people.push(self.followPeople[i].id)
+        }
+        if (self.fileList.length) {
+          self.logo = self.fileList[0].response.data
+        } else {
+          self.logo = 0
+        }
+        // console.log('self.follow_people' + _g.j2s(self.follow_people))
+        let data = {
+          id: self.cus_id,
+          logo: self.logo,
+          dataRecord: self.uploadData,
+          followPeople: self.follow_people,
+          demandServiceContacts: self.contactList,
+          followRecord: self.new__follow_record,
+          auth: self.checked ? 1 : 0,
+          name: self.form.name,
+          account: self.form.account,
+          bank_account: self.bank[0].bank_account,
+          bank_name: self.bank[0].bank_name,
+          bank_user: self.bank[0].bank_user,
+          password: self.form.password,
+          phone: self.form.mobile,
+          remark: self.form.remark,
+          size: self.form.size,
+          level: self.level,
+          province: self.province,
+          area: self.area,
+          address: self.address,
+          city: self.city,
+          del_contact_list: self.del_contact_list,
+          status: self.is_status,
+          del_follow_record: self.del_follow_record,
+          del_data_situation: self.del_data_situation
+        }
+        let id = self.$route.params.id
+        console.log(data)
+        self.apiPut('demand_user/', id, data).then((res) => {
+          console.log('111')
+          if (res.code == 200) {
+            _g.toastMsg(self, 'success', '编辑成功')
+            console.log('成功')
+            this.$parent.isLoading = false
+            setTimeout(() => {
+              this.isLoading = false
+              self.goback()
+            }, 1500)
+          } else {
+            console.log('失败')
+            // _g.dealError(this, res)
+            // this.$parent.isLoading = false
+            _g.dealError(this, res)
+            console.log('1111')
+            // this.isLoading = !this.isLoading
+          }
+        })
+      },
+      goback() { // 返回上一页面
+        var self = this
+        // console.log(self.$route.params.path)
+        if (self.$route.params.path) {
+          self.path = self.$route.params.path
+        } else {
+          self.path = Lockr.get('path')
+        }
+        location.hash = self.path
+      },
+      getAccount(index) { // 对手机号码进行验证
+        var self = this
+        if (!(/^1[34578]\d{9}$/.test(self.contactList[index].phone))) {
+          _g.toastMsg(self, 'warning', '请填写有效的手机号码！')
+        }
+      }
+    },
+    created() {
+      var self = this
+      // console.log('path=' + self.$route.params.path)
+      if (self.$route.params.path) {
+        Lockr.set('path', self.$route.params.path)
+      }
+      self.uploadUrl = window.HOST + 'Upload/data'
+      // console.log(self.uploadUrl)
+      if (self.show == null || self.show['service_edit']) {
+        self.isEdit = false
+      }
+      self.cus_id = self.$route.params.id
+      // console.log(self.cus_id)
+      // alert(_g.j2s(Lockr.get('roleType')))
+      // console.log(_g.j2s(Lockr.get('userInfo')))
+      // console.log('authList=' + _g.j2s(Lockr.get('authList')))
+      self.getCustomerInfo()
+    },
+    components: {
+      staff,
+      upload,
+      category,
+      contact,
+      phones,
+      weixin
+    },
+    mixins: [http]
+  }
+</script>

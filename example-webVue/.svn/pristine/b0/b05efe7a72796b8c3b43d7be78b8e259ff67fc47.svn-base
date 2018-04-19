@@ -1,0 +1,513 @@
+<template>
+  <div class="add_page">
+    <el-form ref="form" :model="form" label-width="160px">
+      <el-form-item label="作品名称:" prop="name" :rules="[
+        { required: true, message: '作品名称不能为空'}]">
+        <el-input v-model="form.name" class="input_small"></el-input>
+      </el-form-item>
+      <el-form-item label="所属公司:" prop="dsuId">
+         <span >{{company}}</span>
+          <el-button @click="choosed()">选择服务方</el-button>
+      </el-form-item>
+      <el-form-item label="作品品类:" prop="classId">
+        <el-select v-model="form.classId" placeholder="请选择品类">
+          <el-option v-for="item in options2" :label="item.name" :value="item.id">
+          </el-option>
+        </el-select>
+      </el-form-item>
+       <el-form-item label="Seo Title:" prop="seoTitle">
+        <el-input v-model="form.seoTitle" class="input_small"></el-input>
+      </el-form-item>
+       <el-form-item label="Seo Keyword:" prop="seoKeyword">
+        <el-input v-model="form.seoKeyword" class="input_small"></el-input>
+      </el-form-item>
+      <el-form-item label="Seo Description:" prop='seoDescription'>
+        <el-input v-model="form.seoDescription" class="input_small"></el-input>
+          </el-form-item>
+        </el-form-item>
+      <el-form-item label="缩略图:" prop="imgUrl">
+          <!-- <el-upload
+          :action="uploadUrl"
+          type="drag"
+          :thumbnail-mode="true"
+          :on-remove="handleRemove"
+          :on-success="uploadSuccess1"
+          :on-error="uploadFail"
+          :default-file-list="fileList1" class="cs hidd">
+            <i class="el-icon-upload"></i>
+            <div class="el-dragger__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件</div>
+          </el-upload> -->
+           <div class="ca_1">  
+          <div  class="v11">
+            <img :src="pic1"/>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess1"
+            :on-remove="handleRemove"
+            :show-upload-list="false"
+            :show-file-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary">替换图片</el-button>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb(最多上传5张)</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+
+      <el-form-item label="轮播图:" prop="carousel" class="slide">
+        <div class="ca_1">
+          <div v-for="(item,index) in showCarousel" label="index" class="v12">
+            <img :src="item"/>
+            <i class="el-icon-circle-close" @click='deleted2(index)'></i>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess2"
+            :on-remove="handleRemove"
+            :show-file-list="false"
+            :show-upload-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary" @click="update2()" v-show="ifFive">点击上传</el-button>
+            <div class="el-upload__tip" slot="tip" v-show="ifFive">只能上传jpg/png文件，且不超过500kb(最多上传5张)</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+
+
+      <el-form-item label="详情页图片:" prop="album" class="slide">
+        <div class="ca_1">
+          <div v-for="(item,index) in showAlbum" label="index" class="v12">
+            <img :src="item"/>
+            <i class="el-icon-circle-close" @click='deleted3(index)'></i>
+          </div>
+          <el-upload
+            :action="uploadUrl"
+            :on-preview="handlePreview"
+            :on-success="uploadSuccess3"
+            :on-remove="handleRemove"
+            :show-file-list="false"
+            :show-upload-list="false"
+            :default-file-list="fileList" class="works_img">
+            <el-button size="small" type="primary" @click="update3()"  class="no1">点击上传</el-button>
+            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          </el-upload>
+        </div>
+      </el-form-item>
+      <el-form-item label="详情描述:" prop="description">
+        <!-- <el-input type="textarea" v-model="form.description" class="input_small"></el-input> -->
+        <div id="div3"></div>
+      </el-form-item>
+      <el-form-item label="状态:"  prop="status" :rules="[
+        { required: true, message: '请选择状态'}]" v-show="shows">
+        <!-- <el-radio-group v-model="form.status"> -->
+          <el-radio :label="2" class="radio" v-model="form.status">已上架</el-radio>
+          <el-radio :label="3" class="radio" v-model="form.status">已下架</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="排序" prop="sort" :label-width="formLabelWidth">
+        <el-input v-model="form.sort" placeholder="请输入0-1000的数字" class="input_small"></el-input>
+      </el-form-item>   
+      <el-form-item>
+        <el-button type="primary" @click="onSubmit()" v-show="shows">发布</el-button>
+        <el-button type="primary" @click="watch()">预览</el-button>
+        <el-button type="primary" @click="cancle()">返回</el-button>
+      </el-form-item>
+    </el-form>
+    <!-- <preview ref="preview" :url="propsImg"></preview> -->
+    <worksWatch ref="worksWatch" :info="form"></worksWatch>
+    <companyChoose ref="companyChoose" :company="company" v-on:delList="onChange" ></companyChoose>
+  </div>
+</template>
+<style>
+  .detial img{
+    position: relative; 
+  }
+  .slide img{
+    position: relative; 
+  }
+  .slide .el-icon-circle-close{
+    position: absolute;
+    margin-top: 5px !important;
+    margin-left: -20px !important;
+  }
+  .detial .el-icon-circle-close{
+    position: absolute;
+    margin-top: 5px !important;
+    margin-left: -20px !important;
+  }
+  .add_page{
+    margin-left: 300px;
+  }
+  .fex{
+    float: left;
+    margin-right: 10px;
+    width: 200px;
+  }
+  .fex .el-dragger{
+    width: 200px;
+  }
+  #div1{
+    height: 300px;
+  }
+  #div2{
+    height: 300px;
+  }
+  #div3{
+    height: 300px;
+  }
+  #div4{
+    height: 300px;
+  }
+  #div5{
+    height: 300px;
+  }
+  .v11 img{
+    width: 300px;
+    height: 150px
+  } 
+</style>
+
+<script>
+import http from '../../../assets/js/http'
+// import preview from './preview.vue'
+import companyChoose from './choose.vue'
+import worksWatch from './works_watch.vue'
+import Wangeditor from 'wangEditor'
+export default {
+  data() {
+    return {
+      pic1: null,
+      shows: true,
+      ifFive: true,
+      // ifSix: true,
+      editor: null,
+      showCarousel: [],
+      showAlbum: [],
+      options1: [],
+      options2: [],
+      uploadUrl: '',
+      fileList: [],
+      fileList1: [],
+      propsImg: '',
+      name: '',
+      id: '',
+      form: {
+        name: '',
+        dsuId: '',
+        classId: '',
+        seoTitle: '',
+        seoKeyword: '',
+        seoKescription: '',
+        status: '',
+        description: '',
+        imgUrl: '',
+        album: [],
+        carousel: [],
+        company: ''
+      },
+      company: ''
+      // isdsuId: ''
+    }
+  },
+  // watch: {
+  //   isdsuId(val) {
+  //     alert(val)
+  //   }
+  // },
+  methods: {
+    onChange(res) {
+      console.log(res)
+      if (res.length != 0) {
+        this.company = res[0].name
+        this.form.dsuId = res[0].id
+        this.form.company = this.company
+      }
+      console.log(this.company, this.form.dsuId)
+    },
+    getData() {
+      // console.log('获取数据')
+      // this.apiGet('service_user/basic').then((res) => {
+      //   if (res.code == 200) {
+      //     console.log(res.data)
+      //     this.options1 = res.data
+      //     // console.log(this.form.dsuId)
+      //   } else {
+      //     _g.dealError(this, res)
+      //     // console.log('列表页失败')
+      //   }
+      // })
+      this.apiGet('classification/all').then((res) => {
+        console.log(res.data)
+        if (res.code == 200) {
+          this.options2 = res.data
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+      // console.log('运行到这了')
+      this.apiGet('projects/' + this.form.id).then((res) => {
+        if (res.code == 200) {
+          console.log(res.data)
+          if (res.data.status == '待审核') {
+            this.shows = false
+          }
+          // this.form = res.data
+          this.form.dsuId = res.data.dsu_id
+          this.form.classId = res.data.class_id
+          this.form.name = res.data.name
+          this.form.status = res.data.status
+          this.form.sort = res.data.sort
+          this.form.description = res.data.description
+          this.form.seoTitle = res.data.seo_title
+          this.form.seoKeyword = res.data.seo_keyword
+          this.form.seoDescription = res.data.seo_description
+          this.form.imgUrl = res.data.img_url
+          this.pic1 = window.imgUrl + res.data.img_url
+          this.form.album = res.data.album
+          this.form.carousel = res.data.carousel
+          this.form.company = res.data.company
+          this.company = this.form.company
+          this.editor.$txt.html('')
+          this.editor.$txt.append(res.data.description)
+          if (res.data.is_show) {
+            this.form.status = 2
+          } else {
+            this.form.status = 3
+          }
+          let data = {
+            name: '图片',
+            url: window.imgUrl + res.data.img_url
+          }
+          this.fileList.push(data)
+          console.log(this.form.carousel[0])
+          let img = window.imgUrl + res.data.img_url
+          this.fileList1.push({ name: '图片', url: img })
+          this.form.imgUrl = res.data.img_url
+          this.form.status = parseInt(this.form.status)
+          for (var k = 0; k < res.data.carousel.length; k++) {
+            let urls = {}
+            urls = window.imgUrl + res.data.carousel[k]
+            // console.log(res.data.carousel[k]+',,,'+k+',,,'+urls)
+            this.showCarousel.push(urls)
+          }
+          console.log(this.showCarousel)
+          console.log(this.form)
+          for (var i = 0; i < res.data.album.length; i++) {
+            let url = {}
+            url = window.imgUrl + res.data.album[i]
+            this.showAlbum.push(url)
+          }
+          console.log(this.showAlbum)
+          // console.log(this.form.img_url)
+          // if (res.data.album.length < 6) {
+          //   this.ifSix = true
+          // } else {
+          //   this.ifSix = false
+          // }
+          if (res.data.carousel.length < 5) {
+            this.ifFive = true
+          } else {
+            this.ifFive = false
+          }
+        } else {
+          _g.dealError(this, res)
+        }
+      })
+    },
+    update2() {
+      // console.log('66666666666666')
+      // if (this.silde_img.length == 2) {
+      //   console.log('有2张图片了')
+      //   _g.toastMsg(this, 'warning', '满了')
+      // }
+    },
+    update3() {
+
+    },
+    deleted2(index) {
+      this.$confirm('是否移除这张图片', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.showCarousel.splice(index, 1)
+        this.form.carousel.splice(index, 1)
+        this.ifFive = true
+      })
+    },
+    deleted3(index) {
+      console.log(index)
+      this.$confirm('是否移除这张图片', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.showAlbum.splice(index, 1)
+        this.form.album.splice(index, 1)
+        // this.ifSix = true
+      })
+      // if (this.detial_img.length == 0) {
+      //   this.ifOnes = false
+      // }
+    },
+    onSubmit() {
+      console.log(this.form)
+      this.form.dsu_id = this.form.dsuId
+      this.form.class_id = this.form.classId
+      this.form.seo_title = this.form.seoTitle
+      this.form.seo_keyword = this.form.seoKeyword
+      this.form.seo_description = this.form.seoDescription
+      this.form.img_url = this.form.imgUrl
+      this.form.description = this.editor.$txt.html()
+      this.$refs.form.validate((pass) => {
+        if (pass) {
+          if (this.form.sort >= 0 && this.form.sort <= 1000) {
+            this.apiPut('projects/', this.form.id, this.form).then((res) => {
+              if (res.code == 200) {
+                _g.toastMsg(this, 'success', '编辑成功')
+                // setTimeout(() => {
+                this.goback()
+                // }, 1500)
+              } else {
+                _g.dealError(this, res)
+              }
+            })
+          } else {
+            _g.toastMsg(this, 'warning', '排序为0-1000的数字')
+          }
+        }
+      })
+    },
+    cancle() {
+      this.goback()
+    },
+    choosed() {
+      this.$refs.companyChoose.open()
+    },
+    goback() {
+      router.go(-1)
+    },
+    uploadSuccess1 (res, file, fileList1) {
+          // console.log('res = ',_g.j2s(res))
+      // this.form.imgUrl = res.data
+      // let data = {
+      //   name: '图片',
+      //   url: window.imgUrl + res.data
+      // }
+      // if (this.fileList.length) {
+      //   this.fileList[0] = data
+      // } else {
+      //   this.fileList.push(data)
+      // }
+      // this.pic1 = null
+      this.pic1 = window.imgUrl + res.data
+      this.form.imgUrl = res.data
+      // console.log(this.pic1)
+      // console.log(this.form.imgUrl)
+    },
+    uploadSuccess2 (res, file, fileList) {
+      this.ifOne = true
+      console.log(file)
+      console.log(res.data)
+      let url = {}
+      url = window.imgUrl + res.data
+      this.showCarousel.push(url)
+      // console.log(url)
+      // console.log(this.slide_img)
+      // console.log(this.slide_img.length)
+      if (this.form.carousel.length < 5) {
+        this.form.carousel.push(res.data)
+        if (this.form.carousel.length >= 5) {
+          this.ifFive = false
+        }
+      }
+    },
+    uploadSuccess3(res, file, fileList3) {
+      console.log(file)
+      console.log(res.data)
+      let urls = {}
+      urls = window.imgUrl + res.data
+      this.showAlbum.push(urls)
+      // console.log(urls)
+      // if (this.form.album.length < 6) {
+      this.form.album.push(res.data)
+        // if (this.form.album.length >= 6) {
+          // this.ifSix = false
+        // }
+      // }
+    },
+    uploadFail(err, res, file) {
+      console.log('err = ', _g.j2s(err))
+      console.log('res = ', _g.j2s(res))
+    },
+    handleRemove(file, fileList) {
+      this.form.imgUrl = ''
+      this.fileList1.splice(file)
+    },
+    continue_update() {
+    },
+    watch() {
+      this.form = this.form
+      this.form.description = this.editor.$txt.html()
+      console.log(this.form)
+      this.$refs.worksWatch.open(this.form)
+      console.log(window.imgUrl)
+    }
+  },
+  mounted() {
+    var yy = true
+    this.form.id = this.$route.params.id
+    console.log(this.form.id)
+    this.editor = new Wangeditor('div3')
+    this.editor.config.menus = [
+      'source',
+      '|',
+      'bold',
+      'underline',
+      'italic',
+      'strikethrough',
+      'eraser',
+      'forecolor',
+      'bgcolor',
+      '|',
+      'quote',
+      'fontfamily',
+      'fontsize',
+      'head',
+      'unorderlist',
+      'orderlist',
+      'alignleft',
+      'aligncenter',
+      'alignright',
+      '|',
+      'link',
+      'unlink',
+      'table',
+      'emotion',
+      '|',
+      'insertcode',
+      '|',
+      'undo',
+      'redo',
+      'lineheight'
+    ]
+    if (yy == true) {
+      this.editor.create()
+      yy == false
+    }
+    this.uploadUrl = window.HOST + 'Upload'
+    this.img = window.HOST + 'Upload'
+   // this.form.carousel = window.HOST + 'Upload'
+    this.getData()
+  },
+  components: {
+    companyChoose,
+    worksWatch
+  },
+  mixins: [http]
+
+}
+</script>

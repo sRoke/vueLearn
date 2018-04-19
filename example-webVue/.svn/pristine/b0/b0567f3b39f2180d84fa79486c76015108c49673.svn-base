@@ -1,0 +1,170 @@
+<template>
+  <div>
+  
+    <el-card class="box-card base-card m-b-20">
+      <div slot="header"
+           class="clearfix">
+        <span style="line-height: 36px;">跟进人员</span>
+      </div>
+      <el-row>
+        <el-col :span="4"
+                v-for="item in followPeople">
+          <!--<div class="tx-c">-->
+          <span>{{ item.label }}：</span>
+          <el-tag type="primary">{{ item.name }}</el-tag>
+          <!--</div>-->
+        </el-col>
+      </el-row>
+    </el-card>
+  
+    <el-row>
+      <el-form ref="follow"
+               :model="followForm"
+               label-width="100px"
+               class="m-t-10 m-b-10">
+        <el-col :span="6">
+  
+          <el-form-item label="客户状态：">
+            <el-radio-group v-model="customerStatus">
+              <el-radio label="已跟进"></el-radio>
+              <el-radio label="无效"></el-radio>
+            </el-radio-group>
+          </el-form-item>
+  
+          <el-form-item prop="time"
+                        label="回访时间：">
+            <el-date-picker type="datetime"
+                            :disabled="!isFollowing"
+                            placeholder="选择日期范围"
+                            v-model="followForm.return_view">
+            </el-date-picker>
+          </el-form-item>
+  
+          <el-form-item prop="level"
+                        label="公司级别：">
+            <el-select v-model="level"
+                       class="level-select"
+                       placeholder="请选择公司级别">
+              <el-option v-for="item in levelOptions"
+                         :label="item.label"
+                         :value="item.value">
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+  
+        <el-col :span="12">
+          <el-form-item prop="remark"
+                        label="跟进说明："
+                        :required="isFollowing">
+            <el-input type="textarea"
+                      v-model="followForm.remark"
+                      placeholder="请填写跟进说明.."
+                      :autosize="{ minRows: 7, maxRows: 10}">
+            </el-input>
+          </el-form-item>
+        </el-col>
+  
+        <el-col :span="1">
+          <el-button type="text"
+                     class="fr m-t-5"
+                     @click="addFollowRecord">添加
+          </el-button>
+        </el-col>
+  
+      </el-form>
+    </el-row>
+  
+    <el-table border
+              :data="followRecord"
+              style="width: 100%"
+              row-class-name="tx-c">
+      <el-table-column label="跟进记录"
+                       header-align="center">
+        <el-table-column prop="time"
+                         label="跟进时间"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column prop="follower"
+                         label="跟进人员"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column prop="remark"
+                         label="跟进说明"
+                         header-align="center">
+        </el-table-column>
+        <el-table-column prop="return_view"
+                         label="下次回访时间"
+                         header-align="center">
+        </el-table-column>
+      </el-table-column>
+    </el-table>
+  
+    <el-row>
+      <el-button class="fr m-t-10"
+                 type="primary"
+                 :loading="saving">保存</el-button>
+    </el-row>
+  </div>
+</template>
+
+<script>
+import http from 'assets/js/http'
+import levelOptions from 'assets/js/level-option.json'
+
+export default {
+  data() {
+    return {
+      level: '',
+      levelOptions: [],
+      followPeople: [
+        { label: '销售人员', name: '小明' },
+        { label: '销售人员', name: '小明' },
+        { label: '销售人员', name: '小明' },
+        { label: '销售人员', name: '小明' },
+        { label: '销售人员', name: '小明' }
+      ],
+      followRecord: [],
+      customerStatus: '无效',
+      followForm: {
+        time: new Date(),
+        return_view: '',
+        remark: '',
+        follower: 'admin'
+      }
+    }
+  },
+  methods: {
+    addFollowRecord() {
+      this.followRecord.push({ ...this.followForm })
+      this.followForm.time = ''
+      this.followForm.remark = ''
+    }
+  },
+  computed: {
+    isFollowing() {
+      return this.customerStatus !== '无效'
+    }
+  },
+  created() {
+    this.levelOptions = levelOptions
+    this.followRecord.push({
+      time: '2017-03-30',
+      follower: '小明',
+      remark: '客户没时间',
+      return_view: '2017-04-07 18:30:00'
+    })
+  },
+  mixins: [http]
+}
+</script>
+
+<style type="text/css">
+.level-select {
+  width: 193px;
+}
+
+.follow-textarea {
+  margin-top: 5px;
+}
+</style>

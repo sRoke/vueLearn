@@ -1,0 +1,795 @@
+<template>
+  <div>
+    <el-row :gutter="20" class="m-t-20">
+      <el-col :span="23" :offset="1">
+        <el-tabs type="border-card" v-model="info.tabIndex" v-bind:class="{ 'hideTab': !showFinance}">
+          <el-tab-pane label="里程碑" name="1">
+            <div class="p-a-40 fz-16" v-if="isOne == ''">
+              <div class="m-b-10" v-for="(p_pro, p_index) in process">
+                <div class="m-l-126 m-b-10" :class="{'active': p_pro.status==1, 'noactive': p_pro.status==0, 'nochild': !p_pro.child||p_pro.child.length==0}">
+                  <span class="order-circle m-r-15">{{p_index+1}}</span>
+                  <span class="main-step-name fz-16">{{p_pro.name}}</span>
+                </div>
+                <div class="h-40 hasdot" v-for="(pro, index) in p_pro.child" :class="{'active': pro.status==1, 'noactive': pro.status==0}">
+                  <div class="inline-block tx-r c-black m-r-15 w-127">{{pro.time}}</div>
+                  <div class="order-dot" :class="{'noactive': pro.status==0, 'first-dot': index==0, 'last-dot': p_pro.child&&index==p_pro.child.length-1}"></div>
+                  <div class="m-l-15 order-circle order-small m-r-15">{{p_index+1}}.{{index+1}}</div>
+                  <span class="step-name m-r-10">{{pro.name}}</span>
+                  <a class="c-blue fz-14" :href="imgUrl + pro.file" v-if="pro.file" download>下载</a>
+                </div>
+              </div>
+            </div>
+            <div class="tx-c p-t-10 p-b-10 fz-14 c-gra" v-else>{{isOne}}</div>
+          </el-tab-pane>
+          <el-tab-pane label="合同信息" name="2">
+            <contract :conId="conId" :model="info.model" :edit="status.isConEdit" v-if="status.isCon"></contract>
+            <div class="tx-c p-t-10 p-b-10 fz-14 c-gra" v-else>未发起合同，合同信息为空</div>
+          </el-tab-pane>
+          <el-tab-pane label="文件管理" name="4">
+            <div>
+              <el-table
+              :data="fileList"
+              style="width: 100%">
+                <el-table-column
+                prop="type"
+                label="文件类型"
+                min-width="150">
+                </el-table-column>
+                <el-table-column
+                prop="file_name"
+                label="文件名"
+                min-width="250">
+                </el-table-column>
+                <el-table-column
+                prop="u_name"
+                label="上传人"
+                min-width="200">
+                </el-table-column>
+                <el-table-column
+                prop="upload_time"
+                label="上传时间"
+                min-width="150">
+                </el-table-column>
+                <el-table-column
+                  v-show="false"
+                  label="操作"
+                  min-width="150">
+                  <template scope="scope">
+                    <el-button
+                      type="danger"
+                      size="small"
+                      @click="delFile(scope.row.id)"
+                      v-show="allEdit">
+                      删除
+                    </el-button>
+                    <a :href="imgUrl + scope.row.file_url" download="{scope.row.file_name}" class="el-button--primary file-down m-l-20" v-show="allEdit">下载</a>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <div class="tx-c m-t-20 m-b-10" v-show="allEdit">
+                <el-button @click="openUp()">上传</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="备注信息" name="5">
+            <el-table
+            :data="remarkData"
+            style="width: 100%">
+              <el-table-column
+              prop="require_status"
+              label="需求状态"
+              min-width="150">
+              </el-table-column>
+              <el-table-column
+              prop="order_status"
+              label="订单状态"
+              min-width="150">
+              </el-table-column>
+              <el-table-column
+              prop="msg"
+              label="跟进备注信息"
+              min-width="250">
+              </el-table-column>
+              <el-table-column
+              prop="u_name"
+              label="跟进人"
+              min-width="200">
+              </el-table-column>
+              <el-table-column
+              prop="create_time"
+              label="跟进备注时间"
+              min-width="150">
+              </el-table-column>
+            </el-table>
+            <div class="m-t-20" v-show="allEdit">
+              <div class="fl">
+                <el-input type="textarea" v-model.trim="remark" placeholder="请填写跟进内容" :rows="3" class="w-500"></el-input>
+              </div>
+              <div class="fl m-t-20 m-l-20">
+                <el-button type="primary" @click="addRemark()">添加跟进</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane label="财务记录" name="3">
+            <div v-if="status.isThree">
+              <div class="m-t-10" style="width: 100%">
+                <div class="finance-title">项目款</div>
+                <el-table
+                :data="proData"
+                style="width: 100%"
+                class="m-t-10">
+                  <el-table-column
+                  prop="type"
+                  label="类型"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="pay_number"
+                  label="流水单号"
+                  min-width="150">
+                  </el-table-column>
+                  <el-table-column
+                  prop="amount"
+                  label="金额"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="pay_type"
+                  label="支付方式"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="certificate"
+                  label="凭证"
+                  min-width="100">
+                  <template scope="scope">
+                  <img :src='scope.row.certificate' @click="watchs(scope.row.certificate)" v-show="show1"/>
+                  </template>
+                  </el-table-column>
+                  <el-table-column
+                  prop="status_attr"
+                  label="状态"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="pay_time"
+                  label="支付时间"
+                  min-width="150">
+                  </el-table-column>
+                  <el-table-column
+                    label="操作"
+                    min-width="100">
+                    <template scope="scope">
+                      <el-button
+                        type="text"
+                        size="small"
+                        @click="payMoney(scope.row, 0)">
+                        {{scope.row.handle}}
+                      </el-button>
+                      <el-button
+                        type="text"
+                        size="small"
+                        class="m-l-10"
+                        @click="payMoney(scope.row, 1)"
+                        v-show="scope.row.status == 5">
+                        {{scope.row.handle2}}
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+              <div class="m-t-30" style="width: 100%" v-show="info.model == 2">
+                <div class="finance-title">提成记录</div>
+                <el-table
+                :data="bonusData"
+                style="width: 100%"
+                class="m-t-10">
+                  <el-table-column
+                  prop="name"
+                  label="款项名"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="pay_number"
+                  label="流水单号"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="sales_count"
+                  label="周期销售量"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="amount"
+                  label="金额"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="pay_type"
+                  label="支付方式"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  label="凭证"
+                  min-width="100">
+                  <template scope="scope">
+                  <img :src='scope.row.certificate' @click="watchs(scope.row.certificate)" v-show="show2"/>
+                 </template>
+                  </el-table-column>
+                  <el-table-column
+                  prop="status_attr"
+                  label="状态"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="create_time"
+                  label="生成时间"
+                  min-width="100">
+                  </el-table-column>
+                  <el-table-column
+                    label="操作"
+                    min-width="100">
+                    <template scope="scope">
+                      <el-button
+                        type="text"
+                        size="small"
+                        @click="payMoney(scope.row, 2)">
+                        {{scope.row.handle}}
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <div class="p-t-5 fr c-light-gray fz-14">需记录季度内每月销量才可生成对应提成记录</div>
+              </div>
+              <div class="m-t-30" style="width: 100%" v-show="(info.model == 2) && (status.isBonus)">
+                <div class="finance-title">销售记录</div>
+                <div class="fl m-b-10 h-28" style="width: 100%">
+                  <div class="fl c-light-gray fz-14">提成计算开始时间：</div>
+                  <div class="fl c-light-gray fz-14" v-show="!showTime">{{ recordTiem }}</div>
+                  <div class="fl m-l-10" id="time" v-show="showTime">
+                    <el-date-picker
+                      v-model="recordAction"
+                      type="month"
+                      size="mini"
+                      placeholder="选择日期">
+                    </el-date-picker>
+                    <el-button
+                      type="text"
+                      size="small"
+                      class="m-l-10"
+                      @click="upTime()">
+                      确定
+                    </el-button>
+                  </div>
+                </div>
+                <el-table
+                :data="saleData"
+                style="width: 571px"
+                class="m-t-10">
+                  <el-table-column
+                  prop="sales_time"
+                  label="月份"
+                  width="100">
+                  </el-table-column>
+                  <el-table-column
+                  prop="sales_count"
+                  label="销量"
+                  width="150">
+                  </el-table-column>
+                  <el-table-column
+                  prop="status"
+                  label="提成状态"
+                  width="200">
+                  </el-table-column>
+                  <el-table-column
+                    label="操作"
+                    width="120">
+                    <template scope="scope">
+                      <el-button
+                        type="text"
+                        size="small"
+                        :disabled="scope.row.dis"
+                        @click="editRecord(scope.row)">
+                        编辑
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+                <div>
+                  <div class="p-t-5 fl c-light-gray fz-14">若当月无销量，可填写销量为0</div>
+                  <div class="m-b-10 p-t-20 fr" v-show="isPage">
+                    <el-pagination
+                    @current-change="handleCurrentChange"
+                    layout="prev, pager, next, jumper"
+                    :page-size="12"
+                    :current-page="currentPage"
+                    :total="dataCount">
+                    </el-pagination>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tx-c p-t-10 p-b-10 fz-14 c-gra" v-else>未签订合同，财务记录为空</div>
+          </el-tab-pane>
+        </el-tabs>
+      </el-col>
+    </el-row>
+    <upImg ref="upImg" :status="0" :urlId="id"></upImg>
+    <recordAdd ref="recordAdd" :saleId="saleId" :title="recordTitle" :record="recordNum"></recordAdd>
+    <preview ref="preview"></preview>
+  </div>
+</template>
+<style type="text/css">
+  #time .el-date-editor.el-input {
+    width: 120px;
+  }
+  .file-down {
+    padding: 7px 9px;
+    font-size: 12px;
+    border-radius: 4px;
+  }
+  .downIcon {
+    display: inline-block;
+    width: 25px;
+    height: 25px;
+    background: url(../../../assets/images/loginMain.png) no-repeat -242px 0px;
+  }
+  .order-circle {
+    display: inline-block;
+    position: relative;
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    border: 2px solid #007dc4;
+    border-radius: 44px;
+    text-align: center;
+    color: #007dc4;
+    background: #fff;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  .order-dot {
+    display: inline-block;
+    position: relative;
+    width: 10px;
+    height: 10px;
+    border-radius: 10px;
+    background-color: #007dc4;
+  }
+  .order-dot:before {
+    display: inline-block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1px;
+    height: 40px;
+    margin-top: -35px;
+    margin-left: -1px;
+    background-color: #007dc4;
+    content: ' ';
+  }
+  .order-dot.last-dot:after {
+    display: inline-block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1px;
+    height: 20px;
+    margin-top: 4px;
+    margin-left: -1px;
+    background-color: #007dc4;
+    content: ' ';
+  }
+  .order-dot.first-dot:before {
+    height: 20px;
+    margin-top: -20px;
+  }
+  .order-dot.noactive,
+  .order-dot.noactive:before,
+  .order-dot.noactive:after {
+    background-color: #999999;
+  }
+  .order-circle.order-gra {
+    color: #999999;
+    border-color: #999999;
+  }
+  .active .order-circle {
+    border-color: #007dc4;
+    color: #fff;
+    background-color: #007dc4;
+  }
+  .noactive .order-circle {
+    border-color: #999999;
+    color: #999999;
+    background-color: #fff;
+  }
+  .nochild .order-circle {
+    margin-top: 5px;
+  }
+  .nochild.noactive .order-circle:before {
+    background-color: #999999;
+  }
+  .noactive .order-circle.order-small {
+    margin-top: 0;
+  }
+  .noactive .order-circle.order-small:before {
+    content: none;
+  }
+  .order-small {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 14px;
+  }
+  .step-name {
+    color: #333;
+  }
+  .active .step-name {
+    color: #44B5DF;
+  }
+  .noactive .step-name {
+    color: #999;
+  }
+  .main-step-name {
+    color: #44B5DF;
+  }
+  .noactive .main-step-name {
+    color: #999;
+  }
+  .m-l-126 {
+    margin-left: 126px;
+  }
+  .w-127 {
+    width: 127px;
+  }
+  .p-a-40 {
+    padding: 0 40px;
+  }
+  .inline-block {
+    display: inline-block;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import contract from './contract.vue'
+  import recordAdd from './addRecord.vue'
+  import upImg from '../order/upImg.vue'
+  import preview from './preview.vue'
+  export default {
+    props: ['isOne', 'status', 'info', 'conId'],
+    data() {
+      return {
+        id: null,
+        remarkData: [],
+        remark: '',
+        proData: [],
+        bonusData: [],
+        saleData: [],
+        process: [],
+        fileList: [],
+        recordTitle: '',
+        isPage: false,
+        currentPage: 1,
+        dataCount: null,
+        recordAction: '',
+        showTime: false,
+        recordTiem: '',
+        recordNum: null,
+        saleId: null,
+        allEdit: false,
+        showFinance: false,
+        imgUrl: '',
+        show1: false,
+        show2: false
+      }
+    },
+    watch: {
+      'status' (to, from) {
+        this.edit = this.status.isConEdit
+      },
+      'isOne' () {
+        if (this.isOne == '') {
+          this.getStep()
+        }
+      }
+    },
+    methods: {
+      // 获取里程碑信息
+      getStep() {
+        console.log(this.status.isConEdit)
+        this.apiGet('requires/' + this.id + '/process').then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.process = res.data
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取备注列表
+      getRemark() {
+        this.apiGet('requires/' + this.id + '/remarks').then((res) => {
+          if (res.code == 200) {
+            this.remarkData = res.data.list
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 添加备注
+      addRemark() {
+        if (this.remark == '') {
+          _g.toastMsg(this, 'warning', '请输入跟进备注')
+          return
+        }
+        this.apiPost('requires/' + this.id + '/remarks', { msg: this.remark }).then((res) => {
+          if (res.code == 200) {
+            _g.toastMsg(this, 'success', '添加成功')
+            setTimeout(() => {
+              this.remark = ''
+              this.getRemark()
+            }, 500)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取文件列表
+      getFiles() {
+        this.apiGet('requires/' + this.id + '/files').then((res) => {
+          if (res.code == 200) {
+            this.fileList = res.data
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 删除文件
+      delFile(id) {
+        this.$confirm('确认删除该文件?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('requires/' + this.id + '/files/', id).then((res) => {
+            if (res.code == 200) {
+              _g.toastMsg(this, 'success', '删除成功')
+              setTimeout(() => {
+                this.getFiles()
+              }, 200)
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+        })
+      },
+      // 上传文件弹窗
+      openUp() {
+        this.$refs.upImg.open()
+      },
+      // 获取项目款列表
+      getProData() {
+        this.apiGet('requires/' + this.id + '/finances/project').then((res) => {
+          // if (!res.data.certificate) {
+          //   res.data.certificate = window.imgUrl + res.data.certificate
+          // }
+          // console.log(res.data)
+          if (res.code == 200) {
+            this.proData = _(res.data).forEach((val, key) => {
+              if (val.certificate) {
+                val.certificate = window.imgUrl + val.certificate
+                this.show1 = true
+              }
+              console.log(val)
+              switch (val.status) {
+                case 2:
+                  val.handle = '确认收款'
+                  val.handle2 = ''
+                  break
+                case 5:
+                  val.handle = '拒绝退款'
+                  val.handle2 = '同意退款'
+                  break
+                case 7:
+                  val.handle = '确认退款'
+                  val.handle2 = ''
+                  break
+                default:
+                  val.handle = ''
+                  val.handle2 = ''
+              }
+            })
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 确认收款
+      payMoney(row, num) {
+        let type = ''
+        let tips = ''
+        switch (row.status) {
+          case 2:
+            type = 'receipt'
+            tips = '确认收款成功'
+            break
+          case 5:
+            if (num == 1) {
+              type = 'agreeRefund'
+              tips = '同意退款成功'
+            } else {
+              type = 'refuseRefund'
+              tips = '拒绝退款成功'
+            }
+            break
+          case 7:
+            type = 'confirmRefund'
+            tips = '确认退款成功'
+            break
+        }
+        this.apiPut('finances/' + row.id, '', { action_type: type }).then((res) => {
+          if (res.code == 200) {
+            _g.toastMsg(this, 'success', tips)
+            setTimeout(() => {
+              window.location.reload()
+            }, 2000)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 编辑记录
+      editRecord(row) {
+        this.recordTitle = row.sales_time + ' 销量'
+        this.recordNum = row.sales_count
+        this.saleId = row.sales_id
+        this.$refs.recordAdd.open()
+      },
+      // 销量提成记录页面跳转
+      handleCurrentChange(val) {
+        this.currentPage = val
+        this.getsaleData()
+      },
+      // 确认销量提成开始时间
+      upTime() {
+        let monthNum = this.recordAction.getMonth() + 1
+        if (monthNum < 10) {
+          monthNum = '0' + monthNum
+        }
+        this.recordTiem = this.recordAction.getFullYear() + '-' + monthNum
+        this.apiPut('requires/' + this.id, '', { action_type: 'commissionTime', commission_time: this.recordTiem }).then((res) => {
+          if (res.code == 200) {
+            this.showTime = false
+            this.getsaleData()
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      // 获取销售记录列表
+      getsaleData() {
+        let data = {
+          params: {
+            page: this.currentPage,
+            pagesize: 12,
+            type: 1
+          }
+        }
+        this.apiGet('requires/' + this.id + '/sales', data).then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.dataCount = res.data.page.total_count
+            if (res.data.page.total_count > 12) {
+              this.isPage = true
+            } else {
+              this.isPage = false
+            }
+            if (res.data.commission_time == '') {
+              this.showTime = true
+            } else {
+              this.showTime = false
+              this.recordTiem = res.data.commission_time
+            }
+            this.saleData = res.data.list
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      watchs(n) {
+        console.log(n)
+        if (n) {
+          this.$refs.preview.open(n)
+        }
+      },
+      // 获取提成记录列表
+      getbonusData() {
+        this.apiGet('requires/' + this.id + '/finances/commission').then((res) => {
+          console.log(res)
+          if (res.code == 200) {
+            this.bonusData = _(res.data).forEach((val, key) => {
+              if (val.certificate) {
+                val.certificate = window.imgUrl + val.certificate
+                this.show2 = true
+              }
+              switch (val.status) {
+                case 2:
+                  val.handle = '确认收款'
+                  break
+              }
+            })
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      }
+    },
+    created() {
+      this.imgUrl = window.imgUrl
+      let auth = Lockr.get('authList')
+      let name = this.$route.name
+      if (auth) {
+        // 需求管理
+        if ((name == 'demandDetail') || (name == 'historyDetail')) {
+          if (typeof (auth.demand_edit) != 'undefined') {
+            this.allEdit = true
+          }
+          if (typeof (auth.demand_finance) != 'undefined') {
+            this.showFinance = true
+          }
+        }
+        // 我的客户
+        if (name == 'myClienDemand') {
+          if (typeof (auth.myClient_edit) != 'undefined') {
+            this.allEdit = true
+          }
+          if (typeof (auth.myClient_finance) != 'undefined') {
+            this.showFinance = true
+          }
+        }
+        // 公海客户
+        if (name == 'publicClienDemand') {
+          if (typeof (auth.publicClient_edit) != 'undefined') {
+            this.allEdit = true
+          }
+          if (typeof (auth.publicClient_finance) != 'undefined') {
+            this.showFinance = true
+          }
+        }
+        // 服务商列表
+        if (name == 'serviceDemandDetail') {
+          if (typeof (auth.service_edit) != 'undefined') {
+            this.allEdit = true
+          }
+          if (typeof (auth.service_finance) != 'undefined') {
+            this.showFinance = true
+          }
+        }
+      } else {
+        this.allEdit = true
+        this.showFinance = true
+      }
+      this.id = this.$route.params.id
+      this.getRemark()
+      this.getFiles()
+      if (this.showFinance == true) {
+        this.getProData()
+        this.getbonusData()
+        this.getsaleData()
+      }
+    },
+    mounted() {
+      if (this.isOne == '') {
+        this.getStep()
+      }
+    },
+    components: {
+      contract,
+      upImg,
+      recordAdd,
+      preview
+    },
+    mixins: [http]
+  }
+</script>

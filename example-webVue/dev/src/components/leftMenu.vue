@@ -1,0 +1,91 @@
+<template>
+  <div>
+    <div v-for="secMenu in menuData">
+      <div class="c-light-gray p-l-10 m-t-15">{{secMenu.title}}</div>
+      <div class="h-50"
+           v-for="item in secMenu.child">
+        <div class="w-100p h-50 p-l-40 left-menu pointer c-gra"
+             :class="{'c-blue': item.menu == menu }"
+             @click="routerChange(item)">
+          <span>{{item.title}}</span>
+          <span class="message-circle"
+                v-show="item.url =='/service/demand/demandlist' && demandNum>0">
+                                                <span v-if="demandNum<99">{{ demandNum }}</span>
+          <span v-else>...</span>
+          </span>
+          <span class="message-circle"
+                v-show="item.url =='/service/order/list' && orderNum>0">
+                                                <span v-if="orderNum<99">{{ orderNum }}</span>
+          <span v-else>...</span>
+          </span>
+          <span class="message-circle"
+                v-show="item.url === '/client/publicClient/unRelative/demand' && unrelateDemand>0">
+                                                <span v-if="unrelateDemand<99">{{ unrelateDemand }}</span>
+          <span v-else>...</span>
+          </span>
+          <span class="message-circle"
+                v-show="item.url === '/client/publicClient/unRelative/service' && unrelateService>0">
+                                                <span v-if="unrelateService<99">{{ unrelateService }}</span>
+          <span v-else>...</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['menuData', 'menu'],
+  data() {
+    return {
+    }
+  },
+  computed: {
+    demandNum() {
+      return store.state.demandNum
+    },
+    orderNum() {
+      return store.state.orderNum
+    },
+    unrelateDemand() {
+      return store.state.unrelateDemand
+    },
+    unrelateService() {
+      return store.state.unrelateService
+    }
+  },
+  methods: {
+    routerChange(item) {
+      // 与当前页面路由相等则刷新页面
+      item.selected = true
+      let path = this.$route.path.slice(1)
+      if (item.url != path) {
+        location.hash = item.url
+        if (item.pid === 491 || item.pid === 492) {
+          return setTimeout(() => _g.reloadPage(this), 0)
+        }
+      } else {
+        _g.reloadPage(this)
+      }
+    }
+  }
+}
+</script>
+
+<style>
+.message-circle {
+  display: inline-block;
+  margin-left: -5px;
+  height: 21px;
+  width: 21px;
+  background-color: red;
+  color: #fff;
+  border-radius: 21px;
+  font-size: 14px;
+  text-align: center;
+  line-height: 21px;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+</style>

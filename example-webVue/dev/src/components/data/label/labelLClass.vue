@@ -1,0 +1,376 @@
+<template>
+  <div id='labelClass'>
+    <el-row>
+      <el-col :span="5" class='m-r-30'>
+        <el-row>
+          <el-input 
+          v-model="lClassVal" 
+          placeholder="请输入搜索内容或添加大类"  
+          @change='serachClass'>
+           <el-button slot="append" icon="plus" @click="addClass()"></el-button>
+          </el-input>
+        </el-row>
+        <el-row class='m-t-10 h-500 class-row bg-wh'>
+          <el-col v-for='(item,index) in show_lClass' class='pos-rel'>
+            <div class='class-defalut' v-bind:class='{"class-selected":curSelectClass == item.name}' @click='selectClass(item,index)'>{{item.name}}</div>
+            <i style='display:inline-block; color:#C0CCDA; cursor:pointer' class="el-icon-circle-close" @click.stop='delClass(item)'></i>
+          </el-col>
+        </el-row>
+      </el-col>
+      <el-col :span="17">
+        <el-row v-show='isShowTags'>
+          <div class='fr'>
+            <el-input 
+            class='w-200' 
+            v-model="tagVal" 
+            placeholder="输入可以搜索词库">
+              <el-button slot="append" icon="search" @click='search()'></el-button>
+            </el-input>
+            <el-button type="primary" @click='openDetail("add")'>添加产品</el-button>
+          </div>
+        </el-row>
+        <el-row type='flex' justify='space-between' v-show='isShowTags'>
+          <el-row class='w-100p block m-t-10'>
+            <div v-for='section in show_tags'>
+              <el-row type='flex' justify='start' class='m-t-10'>
+                <el-button type="text" class='label-type' @click='openDetail("edit", section)'>
+                  {{section.name}}:
+                </el-button>
+                <el-col style='margin:auto'>
+                  <el-tag
+                    v-for="tag in section.word_arr"
+                    class='tag-class m-l-10 m-b-5'
+                    :type="gray">
+                  {{tag.name}}
+                  </el-tag>
+                </el-col>
+              </el-row>
+            </div>
+          </el-row>
+        </el-row>
+        <el-dialog title="提示" v-model="dialogVisible" size="tiny">
+          <span>确定删除？</span>
+          <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">取 消</el-button>
+            <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
+          </span>
+        </el-dialog>
+      </el-col>
+    </el-row>
+    <classDetail ref='classDetail' :type='type' :btitle='bigTitle' :stitle='smallTitle' :detail='childData'></classDetail>
+  </div>
+</template>
+<style type="text/css">
+  #labelClass .block{
+    background: #fff;
+    border: 1px solid #E5E5E5 !important;
+  }
+  #labelClass .tag_selected{
+    background: #20a0ff !important;
+    color: #fff !important;
+    position: relative;
+  }
+  #labelClass .cur-class{
+    color: #333;
+    line-height: 22px;
+  }
+  #labelClass .select-cont{
+    margin-bottom: 15px;
+  }
+  #labelClass .borl-3{
+    border-left: 3px solid #44B5DF !important;
+  }
+  #labelClass .class-row{
+    overflow: hidden;
+    overflow-y:auto;
+  }
+  #labelClass .classBtn{
+    width: 90%;
+    color: #333;
+    position: relative;
+    border-radius: 0px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    background: #CCCCCC;
+  }
+  #labelClass .el-icon-circle-close{
+    position: absolute;
+    top: 8px;
+    right: 4px;
+  }
+  #labelClass .class-defalut{
+    margin:5px 0px; 
+    cursor:pointer; 
+    border-left: 3px solid #fff; 
+    width: 160px; 
+    text-indent:10px; 
+    display:inline-block;
+  }
+  #labelClass .select-classBtn{
+    width: 130px;
+    color: #333;
+    border-radius: 0px;
+    margin-bottom: 10px;
+    background: #0099CC;
+  }
+  #labelClass .class-selected{
+    border-left: 3px solid #44B5DF !important;
+    color: #44B5DF;
+  }
+  #labelClass .tag-block{
+    background: #fff;
+    border: 1px solid #E5E5E5 !important;
+    color: #000;
+  }
+  #labelClass .label-type{
+    width: 150px;
+    text-align: right;
+  }
+</style>
+<script>
+  import http from '../../../assets/js/http'
+  import classDetail from './classDetail.vue'
+  import Vue from 'vue'
+  export default {
+    data() {
+      return {
+        type: '',
+        bigTitle: '产品',
+        smallTitle: '匹配项',
+        childData: {},
+        curSelectClassIndex: 0,  // 位于lClass中的索引
+        curSelectClassId: 0,   // 当前大类的id
+        curSelectClass: '',   // 当前选中的大类
+        curClassObj: {},
+        dialogVisible: false,  // 控制对话框的显示
+        lClassVal: '',    // 大类input框的值
+        tagVal: '',   // 标签input框的值
+        isShowTags: false,
+        lClass: [],
+        show_lClass: [],
+        backup_tags: [],
+        tags: [],
+        show_tags: [] // 显示的数据
+      }
+    },
+    methods: {
+      addClass() {
+        var class_index = _.findLastIndex(this.lClass, {
+          name: this.lClassVal.trim('')
+        })
+        if (class_index < 0) {
+          this.apiPost('product_types', { name: this.lClassVal }).then((res) => {
+            if (res.code == 200) {
+              this.getClass()
+              this.lClassVal = ''
+              _g.toastMsg(this, 'success', '添加成功')
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        } else {
+          _g.toastMsg(this, 'warning', '已存在相同的产品类型')
+        }
+      },
+      search() {
+        var match_tags = []
+        _(this.tags).forEach((res, key) => {
+          var match_label = []
+          _(res.word_arr).forEach((rres, rkey) => {
+            if (rres.name.indexOf(this.tagVal.trim('')) > -1) {
+              match_label.push(rres)
+            }
+          })
+          if (match_label.length != 0) {
+            match_tags.push({ name: res.name, product_id: res.product_id, word_arr: match_label })
+          }
+        })
+        this.show_tags = match_tags
+        console.log(this.tags)
+      },
+      delClass(item) {
+        this.$confirm('即将移除' + item.name + ', 是否继续?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.apiDelete('product_types/', item.id).then((res) => {
+            if (res.code == 200) {
+              this.getClass()
+              this.show_tags = this.tags = []
+              this.tagVal = ''
+              _g.toastMsg(this, 'success', '删除成功')
+            } else {
+              _g.dealError(this, res)
+            }
+          })
+        }).catch(() => {
+          _g.toastMsg(this, 'info', '已取消删除')
+        })
+      },
+      openDetail(mode, data) {
+        console.log(mode, data)
+        // console.log(this.tags)
+        console.log(this.tags[y])
+        if (mode == 'add') {
+          this.childData = {}
+          this.type = 'add-pro'
+        } else {
+          var y = data.product_id
+          this.childData = {
+            name: this.tags[y].name,
+            tag: this.tags[y].word_arr,
+            id: this.tags[y].product_id
+            // name: this.tags[0].name,
+            // tag: this.tags[0].word_arr,
+            // id: this.tags[0].product_id
+          }
+          this.type = 'edit-pro'
+        }
+        this.$refs.classDetail.open()
+      },
+      getClass() {  // 获取大类
+        this.apiGet('product_types').then((res) => {
+          if (res.code == 200) {
+            if (res.data.length != 0) {
+              this.lClass = this.show_lClass = res.data
+            }
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      hasType(type) {
+        // 判断类型名称是否存在
+        var has = false
+        _(this.tags).forEach((res, key) => {
+          if (res.name.trim('') == type) {
+            has = true
+            return
+          }
+        })
+        return has
+      },
+      save(type, detail) {
+        if (type == 'edit-pro') {
+          var param = {
+            product_id: detail.id,
+            product_name: detail.name.trim(''),
+            words: detail.tag
+          }
+          var isSame = true
+          if (this.childData.name != detail.name.trim('')) {
+            isSame = false
+          }
+          if (this.hasType(detail.name.trim('')) && !isSame) {
+            _g.toastMsg(this, 'warning', '产品名称已存在')
+            this.$refs.classDetail.isLoading = false
+          } else {
+            this.apiPut('products/', detail.id, param).then((resObj) => {
+              if (resObj.code == 200) {
+                // console.log(resObj)
+                this.selectClass(this.curClassObj, this.curSelectClassIndex)
+                this.$refs.classDetail.close()
+              } else {
+                _g.dealError(this, resObj)
+              }
+            })
+          }
+        } else {
+          var tag = []
+          _(detail.tag).forEach((res, key) => {
+            tag.push(res.name.trim(''))
+          })
+          if (this.hasType(detail.name.trim(''))) {
+            _g.toastMsg(this, 'warning', '产品名称已存在')
+            this.$refs.classDetail.isLoading = false
+          } else {
+            this.apiPost('products', {
+              product_name: detail.name.trim(''),
+              type_id: this.curSelectClassId,
+              words: tag
+            }).then((resObj) => {
+              if (resObj.code == 200) {
+                this.selectClass(this['show_lClass'][this.curSelectClassIndex], this.curSelectClassIndex)
+                this.$refs.classDetail.close()
+              } else {
+                _g.dealError(this, resObj)
+              }
+            })
+          }
+        }
+      },
+      delete() {
+        // console.log(this.childData)
+        // console.log(this.show_tags)
+        // var show_tag_index = _.findLastIndex(this.show_tags, {
+        //   name: this.childData.name
+        // })
+        // var x = this.childData.id
+        // console.log(x)
+        // console.log(this.show_tags)
+        // // delete this.show_tags.x
+        // // this.show_tags.splice(this.childData.name, 1)
+
+        // // var tag_index = _.findLastIndex(this.tags, {
+        // //   name: this.childData.name
+        // // })
+        // // this.tags.splice(this.childData.name, 1)
+        // // for (var item in this.show_tags) {
+        // //   console.log("person中" + item + "的值=" + this.show_tags[item])
+        // // }
+        // // console.log(this.tags)
+        // delete this.tags.x
+        // delete this.show_tags.x
+        // // console.log(this.show_tags.x)
+        // // console.log(this.tags)
+        // console.log(this.show_tags.x)
+        // this.getClass()
+            // console.log(resObj)
+        this.selectClass(this.curClassObj, this.curSelectClassIndex)
+        this.$refs.classDetail.close()
+      },
+      selectClass(item, index) {
+        this.isShowTags = true
+        this.curSelectClassIndex = index
+        this.curSelectClass = item.name
+        this.curSelectClassId = item.id
+        this.curClassObj = item
+        this.tagVal = ''
+        this.apiGet('products?type=' + item.id).then((res) => {
+          if (res.code == 200) {
+            if (res.data.length != 0) {
+              this.show_tags = this.tags = res.data
+              this.tags = _g.s2j(_g.j2s(this.tags))
+              this.show_tags = _g.s2j(_g.j2s(this.show_tags))
+            } else {
+              this.show_tags = this.tags = []
+            }
+            console.log(this.show_tags)
+            console.log(this.tags)
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+        // console.log(JSON.stringify(item))
+      },
+      serachClass(val) {  // 搜索大类
+        var that = this
+        var newClassArr = []
+        _(that.lClass).forEach((res, key) => {
+          if (res.name.indexOf(val) > -1) {
+            newClassArr.push(res)
+          }
+        })
+        that.show_lClass = newClassArr
+      }
+    },
+    created() {
+      this.getClass()
+    },
+    components: {
+      classDetail
+    },
+    mixins: [http]
+  }
+</script>

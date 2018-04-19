@@ -1,0 +1,459 @@
+<template>
+  <div id="customerList" v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="正在加载中">
+    <div class="m-b-20 ovf-hd">
+      <div class="fr w-300">
+        <el-input placeholder="请输入公司、联系人、手机号" v-model="keywords" v-if="isViewAll">
+          <el-button slot="append" icon="search" @click.prevent="select()"></el-button>
+        </el-input>
+      </div>
+
+      <div class="fr publicClient m-l-20" v-if="isView">
+        <el-select v-model="proValue" placeholder="请输入省" @change="select()">
+          <el-option
+            v-for="item in proOptions"
+            :label="item.label"
+            :value="item.label">
+          </el-option>
+        </el-select>
+        <el-select v-model="cityValue" placeholder="请输入市" class="m-l-20" @change="select()">
+          <el-option
+            v-for="item in cityOptions"
+            :label="item.label"
+            :value="item.label">
+          </el-option>
+        </el-select>
+      </div>
+      
+      <div class="fr m-l-20">
+        <el-select v-model="sturdyMan" filterable placeholder="请选择跟进人员" @change="select()" v-if="isViewAll">
+          <el-option
+            v-for="item in sturdyMen"
+            :label="item.name"
+            :value="item.id">
+          </el-option>
+        </el-select>
+      </div>
+
+      <div class="fl">
+          <a class="btn-link-large del-btn" @click="batchRelease">批量释放</a>
+      </div>
+
+      <!-- <div class="fr m-l-20">
+        <el-select v-model="customer" placeholder="请选择客户" @change="select()" v-if="isViewAll">
+          <el-option
+            v-for="item in customerStatus"
+            :label="item.name"
+            :value="item.num">
+          </el-option>
+        </el-select>
+      </div> -->
+    </div>
+
+    <el-table :data="tableData" style="width: 100%;"
+      @filter-change="applyFilter"
+      @selection-change="handleSelectionChange"
+      @clearSelection='clear'
+      v-if="isView && loadingDone">
+      <el-table-column type="selection" :selectable='isSelect' :reserve-selection="true"></el-table-column>
+      <el-table-column prop="num" label="编号" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="公司名称" prop="name" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="客户级别" prop="p_ranking"
+        :filter-multiple=false
+        :filters="[{ text: '全部', value: '' }, { text: 'A热门客户', value: '1' }, { text: 'B普通客户', value: '2' }, { text: 'C潜在客户', value: '3' }, { text: 'D无法沟通', value: '4' }]"
+        column-key="p_ranking"
+        show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="联系人" prop="p_contact" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="手机号" prop="p_phone" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="跟进状态" prop="followStatus" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="跟进人员" prop="p_name" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column label="跟进记录" min-width="150">
+        <template scope="scope">
+          <el-tooltip class="item" effect="dark" :content='scope.row.p_content' placement="top" popper-class="maxW">
+            <div class='ellips'>{{ scope.row.p_content }}</div>
+          </el-tooltip>
+        </template>
+      </el-table-column>
+      <el-table-column label="跟进时间" prop="followRecord.create_time" show-overflow-tooltip>
+      </el-table-column>
+      <el-table-column inline-template label="操作" :width="getOprWidth">
+        <div>
+          <span>
+            <router-link :to="{ name: 'myClientDetail', params: { id: row.id, path }}" class="btn-link edit-btn">
+              查看
+            </router-link>
+            <router-link v-if="isEdit" :to="{ name: 'myClientEdit', params: { id: row.id, path }}" class="btn-link edit-btn">
+              编辑
+            </router-link>
+          </span>
+        </div>
+      </el-table-column>
+    </el-table>
+
+    <div class="pos-rel p-t-20" v-show="hasNextPage > 0 && loadingDone" v-if="isView">
+      <div class="block pages m-b-10">
+        <el-pagination 
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange" 
+        :page-size="pageSize"
+        :current-page="currentPage"
+        :total="dataCount"
+        :page-sizes="[15, 30, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper" >
+        </el-pagination>
+      </div>
+    </div>
+    <!-- <div class="fl m-t-10" v-if='isEdit'>
+      <el-button type="primary" size="small" v-show='!isMDel' @click='multiDelete'>批量删除</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='cancelDel'>取消</el-button>
+      <el-button type="primary" size="small" v-show='isMDel' @click='sureDel'>确定删除</el-button>
+    </div> -->
+  </div>
+</template>
+<style scoped>
+    .el-dropdown-menu__item:not(.is-disabled):hover{
+      background-color: transparent;
+    }
+    /*#customerList .el-table .cell{
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }*/
+    #customerList .el-tag{
+      background-color: transparent;
+      border: none;
+      border-radius: 0px;
+      color: #000;
+      padding: 0px;
+      font-size: 14px;
+    }
+    #customerList .up-and-down:hover{
+      color: #20A0FF;
+    }
+    #customerList .el-table-filter__checkbox-group .el-checkbox{
+      margin-left: 5px;
+    }
+    .el-table-filter__bottom{
+      text-align: center;
+    }
+    #customerList .ellips{
+      width: 250px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    #customerList .myClient .el-select{
+      width: 100%;
+    }
+</style>
+<script>
+  import address from '../../../assets/js/address'
+  import http from '../../../assets/js/http'
+  export default {
+    data() {
+      return {
+        show: Lockr.get('authList'),
+        keywords: '',
+        currentPage: 1,
+        dataCount: 0,
+        dataPages: 0,
+        pageSize: 15,
+        tableData: [],
+        customer: '',
+        customerStatus: [{
+          name: '有订单客户',
+          num: '1'
+        }, {
+          name: '无订单客户',
+          num: '2'
+        }, {
+          name: '所有客户',
+          num: '3'
+        }],
+        sturdyMen: [],
+        sturdyMan: '',
+        has_order: '3',
+        follow: '',
+        isEmpty: false,
+        isNull: false,
+        level: '',
+        isEdit: false,
+        isView: false,
+        isViewAll: false,
+        isFirst: true,
+        cityValue: '',
+        proValue: '',
+        proOptions: address.pro,
+        cityOptions: address['city']['广东省'],
+        path: '',
+        isMDel: false,
+        selList: [],
+        fullscreenLoading: false
+      }
+    },
+    watch: {
+      sturdyMan(val) { // 监听跟进人员
+        var self = this
+        if (self.$route.params.customer && self.$route.params.name && self.isEmpty) {
+          self.isEmpty = false
+          return
+        }
+        self.follow = val
+      },
+      proValue(val) {  // 监听省份的选择，以更新城市选项
+        var self = this
+        // self.cityValue = ''
+        self.cityOptions = address['city'][val]
+        self.proValue = val
+        if (!self.isFirst) {
+          self.cityValue = ''
+        } else {
+          self.isFirst = false
+        }
+      },
+      customer(val) { // 监听客户的类型
+        var self = this
+        if (self.$route.params.customer && self.$route.params.name && self.isNull) {
+          self.isNull = false
+          return
+        }
+        self.has_order = val
+      },
+      '$route' (to, from) {             // 监听路由改变
+        var self = this
+        self.init()
+      }
+    },
+    methods: {
+      clear(selection) {
+        // console.log(selection)
+      },
+      isSelect(row) {
+        let canRelease = false
+        let peoples = row.followPeople || []
+        for (let item of peoples) {
+          if (canRelease) return canRelease
+          canRelease = item.id == Lockr.get('userInfo').u_id
+        }
+        return canRelease
+      },
+      multiDelete() {
+        this.isMDel = true
+      },
+      batchRelease() {
+        if (this.selList.length <= 0) {
+          return _g.toastMsg(this, 'warning', '请勾选数据')
+        }
+        this.apiPost('customers/free_follow', { id: this.selList }).then((res) => {
+          if (res.code == 200) {
+            this.isMDel = false
+            this.getCustomerList()
+            _g.toastMsg(this, 'success', '释放成功')
+          } else {
+            _g.dealError(this, res)
+          }
+        })
+      },
+      handleSelectionChange(val) {
+        this.selList = []
+        _(val).forEach((res, key) => {
+          this.selList.push(res.id)
+        })
+      },
+      select() { // 通过路由的参数保存页面的状态
+        var self = this
+        router.push({ path: '/client/myClient/list', query: { keyword: self.keywords, page: self.currentPage, has_order: self.has_order, follow: self.follow, province: self.proValue, city: self.cityValue, sturdyMan: self.sturdyMan, customer: self.customer }})
+      },
+      init() { // 根据页面的状态获取页面数据
+        this.fullscreenLoading = true
+        var self = this
+        self.getFollowStaff()
+      },
+      getQuery() {  // 对路由的参数进行判断
+        var self = this
+        if (self.$route.query) {
+          if (self.$route.query.keyword) {
+            self.keywords = self.$route.query.keyword
+          } else {
+            self.keywords = ''
+          }
+          if (self.$route.query.page) {
+            self.currentPage = self.$route.query.page * 1
+          } else {
+            self.currentPage = 1
+          }
+          if (self.$route.query.province) {
+            self.proValue = self.$route.query.province
+          } else {
+            self.proValue = ''
+          }
+          if (self.$route.query.city) {
+            self.cityValue = self.$route.query.city
+          } else {
+            self.cityValue = ''
+          }
+          if (self.$route.query.has_order) {
+            self.has_order = self.$route.query.has_order
+          } else {
+            self.has_order = ''
+          }
+          if (self.$route.query.customer) {
+            self.customer = self.$route.query.customer
+          } else {
+            self.customer = ''
+          }
+          if (self.$route.query.follow) {
+            self.follow = self.$route.query.follow
+          } else {
+            self.follow = ''
+          }
+          if (self.$route.query.sturdyMan) {
+            self.sturdyMan = Number(self.$route.query.sturdyMan)
+          } else {
+            self.sturdyMan = ''
+          }
+          if (self.sturdyMan == 0) {
+            self.sturdyMan = self.$route.query.sturdyMan
+          }
+        }
+        self.path = self.$route.fullPath
+        self.getCustomerList()
+      },
+      handleCurrentChange(val) {  // 分页的选择
+        var self = this
+        self.currentPage = val
+        self.select()
+      },
+      handleSizeChange(val) {
+        this.pageSize = val
+        if (this.currentPage != 1) {
+          this.currentPage = 1
+          this.select()
+        }
+        this.getCustomerList()
+      },
+      applyFilter(filter) { // 根据客户级别的条件或跟进状态的条件刷选
+        var self = this
+        if (filter.p_ranking.length == 0) {
+          self.level = ''
+        } else if (filter.p_ranking.length > 0) {
+          self.level = filter.p_ranking[0]
+        }
+        self.getCustomerList()
+      },
+      getCustomerList() {  // 获取客户列表
+        this.fullscreenLoading = true
+        var self = this
+        if (self.isView) {
+          // console.log(self.sturdyMan)
+          self.apiGet('customers/mine?isAuth=all&keyword=' + encodeURIComponent(self.keywords) + '&page=' + self.currentPage + '&has_order=' + self.has_order + '&pagesize=' + self.pageSize + '&follow=' + self.follow + '&level=' + self.level + '&province=' + encodeURIComponent(self.proValue) + '&city=' + encodeURIComponent(self.cityValue)).then((res) => {
+            this.fullscreenLoading = false
+            // console.log('res = ', _g.j2s(res))
+            self.customerData(res)
+          })
+        } else {
+          return
+        }
+      },
+      customerData(res) { // 对获取的客户列表的信息进行处理
+        var self = this
+        if (res.code != 200) {
+          _g.dealError(self, res)
+        } else {
+          self.tableData = res.data.list
+          self.currentPage = res.data.current_page
+          self.dataCount = res.data.total_count
+          self.dataPages = res.data.total_pages
+          if (res.data.list) {
+            for (var j = 0; j < res.data.list.length; j++) {
+              let arr = ['', 'A热门客户', 'B普通客户', 'C潜在客户', 'D无法沟通']
+              self.tableData[j].p_ranking = arr[res.data.list[j].level]
+              if (res.data.list[j].followPeople.length != 0) {
+                for (var i = 0; i < res.data.list[j].followPeople.length; i++) {
+                  if (i == 0) {
+                    self.tableData[j].p_name = res.data.list[j].followPeople[i].name
+                  } else {
+                    self.tableData[j].p_name += '、' + res.data.list[j].followPeople[i].name
+                  }
+                }
+              }
+              if (res.data.list[j].demandServiceContacts) {
+                self.isEdit ? self.tableData[j].p_contact = res.data.list[j].demandServiceContacts.name : null
+                self.isEdit ? self.tableData[j].p_phone = res.data.list[j].demandServiceContacts.phone : null
+              }
+              if (res.data.list[j].followRecord) {
+                self.tableData[j].p_content = res.data.list[j].followRecord.content
+              }
+            }
+          }
+          // console.log('D res=', _g.j2s(self.tableData))
+        }
+      },
+      getFollowStaff() { // 获取跟进人员
+        var self = this
+        if (self.isView) {
+          self.apiGet('customers/customer_follow_list').then((res) => {
+            // console.log('77777777777777res = ', _g.j2s(res))
+            if (res.code != 200) {
+              _g.dealError(self, res)
+            } else {
+              self.sturdyMen = res.data
+              self.sturdyMen.unshift({ name: '全部', id: '0' })
+              self.getQuery()
+            }
+          })
+        } else {
+          return
+        }
+      }
+    },
+    computed: {
+      getOprWidth() {
+        return this.isEdit ? 150 : 75
+      },
+      loadingDone() {
+        return !this.fullscreenLoading
+      },
+      hasNextPage() {
+        return this.dataPages > 1
+      }
+    },
+    created() {
+      var self = this
+      // alert(self.$route.fullPath)
+      if (self.show == null || self.show['myClient_view'] || self.show['myClient_button']) {
+        self.isView = true
+      }
+      if (self.show == null || self.show['myClient_edit']) {
+        self.isView = true
+        self.isEdit = true
+      }
+      if (self.show == null || self.show['myClient_viewAll']) {
+        self.isViewAll = true
+        self.isView = true
+      }
+      if (self.$route.params.customer && self.$route.params.name && !self.sturdyMan) {
+        self.isEmpty = true
+        self.isNull = true
+        if (self.$route.params.customer == '有订单客户') {
+          self.has_order = 1
+        } else {
+          self.has_order = 3
+        }
+        self.customer = self.$route.params.customer
+        self.sturdyMan = self.$route.params.id
+        self.follow = self.$route.params.id
+        self.select()
+      } else {
+        self.init()
+      }
+    },
+    mixins: [http]
+  }
+</script>
